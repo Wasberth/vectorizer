@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+  <script type="text/javascript" src="js/popper.min.js"></script>
   <title>Buenas tardes</title>
 </head>
 <body>
@@ -15,21 +16,56 @@
         <svg class="bd-placeholder-img w-100 h-100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"></rect><text x="50%" y="50%" fill="#eceeef" dy=".3em">Imagen vectorizada</text></svg>
       </div>
   </div>
-  <div class="dropup position-fixed bottom-0 end-0 rounded-circle m-5">
-    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-    Configurar imagen
-  </button>
-  <ul class="dropdown-menu">
-    <li>
-      <a class="dropdown-item" href="#">...</a>
-      <a class="dropdown-item" href="#">...</a>
-      <a class="dropdown-item" href="#">...</a>
-    </li>
-  </ul>
-  <button type="button" class="btn btn-primary">
-    Descargar imagen
-  </button>
-
-</div>
+  <div class="position-fixed bottom-0 end-0 rounded-circle m-5">
+    <div class="dropup btn-group">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="false">
+        Configuración
+      </button>
+      <form class="dropdown-menu p-4">
+        <h4>Agrupación</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="agrupacion" id="radioAgrup1">
+          <label class="form-check-label" for="radioAgrup1">
+            Por color
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="agrupacion" id="radioAgrup2" checked>
+          <label class="form-check-label" for="radioAgrup2">
+            No agrupar
+          </label>
+        </div>
+        <h4>Estilo de dibujo</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="estilo" id="radioEstilo1">
+          <label class="form-check-label" for="radioEstilo1">
+            Rellenar figuras
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="estilo" id="radioEstilo2" checked>
+          <label class="form-check-label" for="radioEstilo2">
+            Solo contornos
+          </label>
+        </div>
+        <h4>Rellenos de espacios</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="espacios" id="radioEspacios1">
+          <label class="form-check-label" for="radioEspacios1">
+            Recortar
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="espacios" id="radioEspacios2" checked>
+          <label class="form-check-label" for="radioEspacios2">
+            Apilar
+          </label>
+        </div>
+      </form>
+    <button type="button" class="btn btn-success">
+      Descargar imagen
+    </button>
+  </div>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
 </body>
 </html>
