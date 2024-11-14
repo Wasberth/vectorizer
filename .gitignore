@@ -1,3 +1,9 @@
-*.png
+# Block all .jpg and .png files
 *.jpg
+*.png
 *.jpeg
+
+# Allow .jpg and .png files inside any img folder
+!*/img/*.jpg
+!*/img/*.jpeg
+!*/img/*.png
