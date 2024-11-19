@@ -4,6 +4,6 @@
 *.jpeg
 
 # Allow .jpg and .png files inside any img folder
-!*/img/*.jpg
-!*/img/*.jpeg
-!*/img/*.png
+!**/img/**/*.jpg
+!**/img/**/*.jpeg
+!**/img/**/*.png
