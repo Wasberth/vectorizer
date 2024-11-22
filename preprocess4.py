@@ -2,9 +2,10 @@ import numpy as np
 from sklearn.cluster import KMeans
 from PIL import Image
 import cv2
+from skimage.filters.rank import modal
 
 # Cargar la imagen y convertirla en un array de píxeles
-imagen = Image.open('img/test3.png')
+imagen = Image.open('img/test5.png')
 pixels = np.array(imagen)[:,:,0:3]
 print(pixels.shape)
 
@@ -15,7 +16,7 @@ pixels_color_space = cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)
 pixels_2d = pixels_color_space.reshape(-1, 3)  # Convertir a una lista 2D de colores LAB
 
 # Aplicar K-Means
-kmeans = KMeans(n_clusters=6, random_state=22)
+kmeans = KMeans(n_clusters=4, random_state=22)
 labels = kmeans.fit_predict(pixels_2d)
 colores_clusters = kmeans.cluster_centers_
 
@@ -24,6 +25,8 @@ pixels_recolored = colores_clusters[labels].reshape(pixels.shape).astype(np.uint
 
 # Convertir a RGB para OpenCV
 imagen_segmentada_rgb = cv2.cvtColor(pixels_recolored, cv2.COLOR_LAB2RGB)
+imagen_segmentada_rgb = modal(imagen_segmentada_rgb, np.ones((3,3,1)))
+imagen_segmentada_rgb = modal(imagen_segmentada_rgb, np.ones((3,3,1)))
 
 # Convertir la imagen procesada de nuevo a PIL y guardar
 imagen_final = Image.fromarray(imagen_segmentada_rgb)

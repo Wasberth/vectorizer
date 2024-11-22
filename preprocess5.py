@@ -1,15 +1,18 @@
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
 from PIL import Image
 import cv2
-import matplotlib.pyplot as plt
+from skimage.filters.rank import modal
+from sklearn.metrics import silhouette_score
 
 # Cargar la imagen y convertirla en un array de píxeles
 imagen = Image.open('img/test4.png')
 if imagen.mode != 'RGB':
     imagen = imagen.convert('RGB')
-pixels = np.array(imagen)
+pixels = np.array(imagen)[:,:,0:3]
+print(pixels.shape)
+
+pixels = cv2.bilateralFilter(pixels, d=5, sigmaColor=75, sigmaSpace=75)
 
 # Convertir los colores de la imagen de RGB a LAB
 pixels_color_space = cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)
@@ -42,29 +45,20 @@ for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 c
 # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
 optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
 
-print(f"El número óptimo de clusters es: {optimal_k}")
-
-# Mostrar la gráfica del silhouette coefficient
-plt.figure(figsize=(8, 6))
-plt.plot(range(2, max_k + 1), silhouette_scores, marker='o')
-plt.title('Silhouette Coefficient para selección de K')
-plt.xlabel('Número de clusters (k)')
-plt.ylabel('Silhouette Coefficient')
-plt.axvline(x=optimal_k, linestyle='--', color='r', label=f'Optimal k = {optimal_k}')
-plt.legend()
-plt.show()
-
 # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
 kmeans = KMeans(n_clusters=optimal_k, random_state=22)
 kmeans.fit(pixels_2d)
 colores_clusters = kmeans.cluster_centers_
 etiquetas = kmeans.labels_
 
-# Convertir los colores de vuelta de LAB a RGB y reconstruir la imagen
-imagen_recolorada_color_space = colores_clusters[etiquetas].reshape(pixels.shape).astype(np.uint8)
-imagen_recolorada_rgb = cv2.cvtColor(imagen_recolorada_color_space, cv2.COLOR_LAB2RGB)
-imagen_final = Image.fromarray(imagen_recolorada_rgb)
+# Reconstruir la imagen segmentada
+pixels_recolored = colores_clusters[etiquetas].reshape(pixels.shape).astype(np.uint8)
 
-# Guardar y mostrar la imagen final
-imagen_final.save('imagen_recolorada.png')
+# Convertir a RGB para OpenCV
+imagen_segmentada_rgb = cv2.cvtColor(pixels_recolored, cv2.COLOR_LAB2RGB)
+imagen_segmentada_rgb = modal(imagen_segmentada_rgb, np.ones((3,3,1)))
+
+# Convertir la imagen procesada de nuevo a PIL y guardar
+imagen_final = Image.fromarray(imagen_segmentada_rgb)
+imagen_final.save('imagen_pre_denoised.png')
 imagen_final.show()

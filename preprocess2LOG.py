@@ -7,18 +7,21 @@ import matplotlib.pyplot as plt
 
 # Cargar la imagen y convertirla en un array de píxeles
 imagen = Image.open('img/test4.png')
+# Convertir la imagen a RGB si no lo está
 if imagen.mode != 'RGB':
     imagen = imagen.convert('RGB')
+
 pixels = np.array(imagen)
 
 # Convertir los colores de la imagen de RGB a LAB
-pixels_color_space = cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)
+pixels_color_space = np.log(np.array(cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)).astype(np.float64))
 pixels_2d = pixels_color_space.reshape(-1, 3)  # Convertir a una lista 2D de colores LAB
 
 # Determinar el número óptimo de clusters usando el silhouette coefficient
 max_k = 30
 silhouette_scores = []  # Lista para almacenar los valores del silhouette score
 sample_size = len(pixels_2d)
+print("shapes", pixels.shape)
 
 # Log values:
 # 
@@ -31,6 +34,7 @@ sample_size = len(pixels_2d)
 sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
 
 # Evaluar silhouette coefficient para diferentes valores de k
+
 print("Evaluando")
 for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
     kmeans = KMeans(n_clusters=k, random_state=22)
@@ -41,18 +45,19 @@ for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 c
 
 # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
 optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
+#optimal_k = 19
 
 print(f"El número óptimo de clusters es: {optimal_k}")
 
 # Mostrar la gráfica del silhouette coefficient
-plt.figure(figsize=(8, 6))
-plt.plot(range(2, max_k + 1), silhouette_scores, marker='o')
-plt.title('Silhouette Coefficient para selección de K')
-plt.xlabel('Número de clusters (k)')
-plt.ylabel('Silhouette Coefficient')
-plt.axvline(x=optimal_k, linestyle='--', color='r', label=f'Optimal k = {optimal_k}')
-plt.legend()
-plt.show()
+#plt.figure(figsize=(8, 6))
+#plt.plot(range(2, max_k + 1), silhouette_scores, marker='o')
+#plt.title('Silhouette Coefficient para selección de K')
+#plt.xlabel('Número de clusters (k)')
+#plt.ylabel('Silhouette Coefficient')
+#plt.axvline(x=optimal_k, linestyle='--', color='r', label=f'Optimal k = {optimal_k}')
+#plt.legend()
+#plt.show()
 
 # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
 kmeans = KMeans(n_clusters=optimal_k, random_state=22)
@@ -61,7 +66,7 @@ colores_clusters = kmeans.cluster_centers_
 etiquetas = kmeans.labels_
 
 # Convertir los colores de vuelta de LAB a RGB y reconstruir la imagen
-imagen_recolorada_color_space = colores_clusters[etiquetas].reshape(pixels.shape).astype(np.uint8)
+imagen_recolorada_color_space = np.exp(colores_clusters[etiquetas].reshape(pixels.shape)).astype(np.uint8)
 imagen_recolorada_rgb = cv2.cvtColor(imagen_recolorada_color_space, cv2.COLOR_LAB2RGB)
 imagen_final = Image.fromarray(imagen_recolorada_rgb)
 

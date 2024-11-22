@@ -3,12 +3,19 @@ import numpy as np
 from PIL import Image
 import random
 
-def detectar_bordes(imagen):
+def detectar_bordes_canny(imagen):
     # Convertir la imagen a escala de grises
     gris = cv2.cvtColor(imagen, cv2.COLOR_RGB2GRAY)
     # Aplicar el detector de bordes Canny
     bordes = cv2.Canny(gris, 100, 200)
     return bordes
+
+def detectar_bordes_sobel(imagen):
+    gris = cv2.cvtColor(imagen, cv2.COLOR_RGB2GRAY)
+    grad_x = cv2.Sobel(gris, cv2.CV_64F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(gris, cv2.CV_64F, 0, 1, ksize=3)
+    bordes = cv2.magnitude(grad_x, grad_y)
+    return np.uint8(bordes)
 
 def segmentar_areas(bordes):
     # Encontrar los componentes conectados en los bordes
@@ -25,11 +32,13 @@ def colorear_areas(imagen, labels_im, num_labels):
     return salida
 
 # Cargar la imagen
-imagen = Image.open('christine.jpg')
+imagen = Image.open('img/test2.jpg')
+if imagen.mode != 'RGB':
+    imagen = imagen.convert('RGB')
 imagen_np = np.array(imagen)
 
 # Detectar bordes
-bordes = detectar_bordes(imagen_np)
+bordes = detectar_bordes_sobel(imagen_np)
 
 # Segmentar áreas
 labels_im, num_labels = segmentar_areas(bordes)
@@ -39,9 +48,9 @@ imagen_coloreada = colorear_areas(imagen_np, labels_im, num_labels)
 
 # Convertir de vuelta a imagen y guardar/mostrar
 bordes_final = Image.fromarray(bordes)
-bordes_final.save('bordes6.png')
+bordes_final.save('bordes_2.png')
 bordes_final.show()
 
 imagen_final = Image.fromarray(imagen_coloreada)
-imagen_final.save('imagen_random_coloreada6.png')
+imagen_final.save('imagen_random_colores_2.png')
 imagen_final.show()
