@@ -7,3 +7,6 @@
 !**/img/**/*.jpg
 !**/img/**/*.jpeg
 !**/img/**/*.png
+
+# Block dataset folder
+dataset/
