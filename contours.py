@@ -32,6 +32,6 @@ for color in colors:
         cv2.drawContours(colored_mask, [c], 0, [255, 255, 255], -1)  # Draw contour with the specific color
         cv2.imwrite(f'layers/figure{i}.png', colored_mask)  # Save as PNG for testing
 
-        cv2.drawContours(contour_mask, [c], 0, [255, 255, 255], 5)  # Draw contour with the specific color
+        cv2.drawContours(contour_mask, [c], 0, [255, 255, 255], 1)  # Draw contour with the specific color
         cv2.imwrite(f'layers/contour{i}.png', contour_mask)  # Save as PNG for testing
         i += 1
