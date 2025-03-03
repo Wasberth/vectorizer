@@ -81,32 +81,41 @@ def jolt(fourier, t):
     
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    import numpy as np
+    import cv2
 
     image = cv2.imread('D:/My Files/Documentos/Codigos/ai-image-to-vector/layers/contour6.png', cv2.IMREAD_GRAYSCALE)
     binary = (image == 255).astype(np.uint8)
-    #trace = trace_contour(binary)
     fourier_image = fourier(binary)
-    time = np.linspace(0, 1, len(fourier_image))
 
-    #ac_pos = np.array([draw_trace(trace, t) for t in time])
-    v_pos = np.array([position(fourier_image, t) for t in time])
-    v_vel = np.array([velocity(fourier_image, t) for t in time])
-    #v_acc = np.array([acceleration(fourier_image, t) for t in time])
-    #v_jolt = np.array([jolt(fourier_image, t) for t in time])
+    pos_samples = len(fourier_image)
+    vel_samples = 100
 
-    #plt.plot(np.abs(np.fft.fftshift(fourier_image)))
-    #plt.plot(np.arctan2(fourier_image.imag, fourier_image.real))
+    pos_time = np.linspace(0, 1 - np.finfo(float).eps, pos_samples)
+    vel_time = np.linspace(0, 1 - np.finfo(float).eps, vel_samples)
 
-    plt.plot(v_pos.real, v_pos.imag, label="Position")
-    plt.plot(v_vel.real, v_vel.imag, label="Velocity")
+    v_pos = np.array([position(fourier_image, t) for t in pos_time])
+    v_vel = np.array([velocity(fourier_image, t) for t in vel_time])
+
+    plt.figure(figsize=(8, 8))
+    plt.plot(v_pos.real, v_pos.imag, label="Position", color='blue')
+    
+    # Graficar las velocidades como vectores
+    plt.quiver(
+        v_pos.real[(vel_time * pos_samples).astype(int)],
+        v_pos.imag[(vel_time * pos_samples).astype(int)],
+        v_vel.real,
+        v_vel.imag,
+        angles='xy', scale_units='xy', scale=1, color='red', alpha=0.7
+    )
+    
     plt.xlabel("Real Part")
     plt.ylabel("Imaginary Part")
     plt.axhline(0, color="gray", linestyle="--", linewidth=0.5)
     plt.axvline(0, color="gray", linestyle="--", linewidth=0.5)
-    #plt.xlim(0, image.shape[1])
-    #plt.ylim(0, image.shape[0])
     plt.grid()
     plt.legend()
-    plt.title("Complex Function Trajectory")
+    plt.title("Complex Function Trajectory with Velocity Vectors")
     plt.show()
+
 
