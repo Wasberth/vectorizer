@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the image and convert it float32 (kmeans requires float32 type).
-original_image = cv2.imread('layer_test.png')
+original_image = cv2.imread('C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/dataset/input/Baby Metal Death.png')
 image = original_image.astype(np.int64)
 
 cols, rows = image.shape[1], image.shape[0]
@@ -20,6 +20,7 @@ all_contours = np.zeros_like(original_image)
 i = 0
 
 for color in colors:
+    color_contours = np.zeros_like(original_image)
     mask = np.zeros((rows*cols, 1), np.uint8)  # Create a zeroed mask in the size of image.
     mask[data == color] = 255  # Set all pixels with the same color to 255.
     mask = mask.reshape((rows, cols))  # Reshape the mask back to the size of the image.
@@ -27,31 +28,24 @@ for color in colors:
 
     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]  # Find contours
     cv2.drawContours(all_contours, cnts, -1, (255, 255, 255), 1)
-    for c in cnts:
+    cv2.drawContours(color_contours, cnts, -1, (255, 255, 255), 1)
+    cv2.imwrite(f'C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/layers/figure{i}.png', color_contours)
+    i+=1
+    """for c in cnts:
         colored_mask = np.zeros_like(original_image)  # Initialize colored_mask with zeros
         contour_mask = np.zeros_like(original_image)  # Initialize colored_mask with zeros
         x, y = tuple(c[0][0])  # First coordinate in the contour
         color = original_image[y, x]  # Get the color of the pixel in that coordinate
-        cv2.drawContours(colored_mask, [c], 0, [255, 255, 255], -1)  # Draw contour with the specific color
-        cv2.imwrite(f'layers/figure{i}.png', colored_mask)  # Save as PNG for testing
+        #cv2.drawContours(colored_mask, [c], 0, [255, 255, 255], -1)  # Draw contour with the specific color
+        #cv2.imwrite(f'C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/layers/figure{i}.png', colored_mask)  # Save as PNG for testing
 
-        cv2.drawContours(contour_mask, [c], 0, [255, 255, 255], 1)  # Draw contour with the specific color
-        cv2.imwrite(f'layers/contour{i}.png', contour_mask)  # Save as PNG for testing
-        i += 1
+        #cv2.drawContours(contour_mask, [c], 0, [255, 255, 255], 1)  # Draw contour with the specific color
+        #cv2.imwrite(f'C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/layers/contour{i}.png', contour_mask)  # Save as PNG for testing
+        i += 1"""
 
 print("number of figures: ", i)
 
-cv2.imwrite('layers/all_contours.png', all_contours)
-bn_contours = all_contours[:, :, 0].astype(np.uint8)
+cv2.imwrite('C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/layers/all_contours.png', all_contours)
 
-kernel = np.array([[1, 1, 1],
-                   [1, -8, 1],
-                   [1, 1, 1]], dtype=np.int8)
-
-intersecciones = cv2.filter2D(bn_contours, cv2.CV_8U, kernel)
-
-# Umbralizar para marcar los puntos de intersección
-_, intersecciones_bin = cv2.threshold(intersecciones, 250, 255, cv2.THRESH_BINARY)
-
-plt.imshow(intersecciones_bin, cmap='gray')
+plt.imshow(all_contours, cmap='gray')
 plt.show()
