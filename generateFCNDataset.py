@@ -174,7 +174,27 @@ def compareColors(color1, color2):
         return True
     return False
 
-def concatMatrix(idx, input, output, lock):
+def findColors(file):
+    color_amount = 0
+
+    with open(file, "r", encoding="utf-8") as f:
+        for line in f:
+            x = re.findall("\.fil[0-9]+", line)
+            if(x):
+                key = x[0][1:]
+                y = re.findall(r"\#[0-9A-F]{6}", line)
+                if(y):
+                    color_amount += 1
+                else:
+                    y = re.search(r"{fill:(\w+)", line)
+                    if(y and y.group(1) != "none"):
+                        color_amount += 1
+                    else:
+                        print("Wrong color class format")
+                        print(line)
+    return color_amount
+
+def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
     print(output)
     fcn_input = []
     fcn_output = []
@@ -284,8 +304,15 @@ def concatMatrix(idx, input, output, lock):
         fcn_input.append(original_arrays[key])
         fcn_output.append(np.stack((output_arrays_se[key], output_arrays_control[key]), axis=-1))
 
-    np.save(input_directory+f"{idx}.npy", fcn_input)
-    np.save(output_directory+f"{idx}.npy", fcn_output)
+    with lock:
+        save_memmap = np.memmap(input_directory+f"{idn}.npy", mode="r+", shape=input_shape)
+        for i in range(len(fcn_input)):
+            save_memmap[idx+i] = np.expand_dims(fcn_input[i], axis=-1)
+        save_memmap.flush()
+        save_memmap_o = np.memmap(output_directory+f"{idn}.npy", mode="r+", shape=output_shape)
+        for i in range(len(fcn_input)):
+            save_memmap_o[idx+i] = fcn_output[i]
+        save_memmap_o.flush()
 
 
 if __name__ == "__main__":
@@ -299,17 +326,35 @@ if __name__ == "__main__":
         thread_info = []
         i = 0
 
+        width = 0
+        height = 0
+        color_id = []
         directory = os.fsencode(root+"output/")
+        file_num = 0
         for file in os.listdir(directory):
             filename = os.fsdecode(file)[:-4]
-            input = root+'input/'+filename+'.png'
-            output = root+'output/'+os.fsdecode(file)
-            thread_info.append((i, input, output, lock))
-            i += 1
+            if filename.endswith('_0'):
+                color_id.append(file_num)
+                colors = findColors(root+"output/"+filename+'.svg')
+                file_num += colors
+                i += 1
+                if i < 2:
+                    img = Image.open(root+"input/"+filename+".png")
+                    width, height = img.size
+        # np.save(input_directory+"0.npy", np.zeros((file_num, height, width, 1)))
+        # np.save(output_directory+"0.npy", np.zeros((file_num, height+(padding*2), width+(padding*2), 2)))
+        i = 0
+        print(color_id)
+        for file in os.listdir(directory):
+            filename = os.fsdecode(file)[:-4]
+            if filename.endswith('_0'):
+                input = root+'input/'+filename+'.png'
+                output = root+'output/'+os.fsdecode(file)
+                thread_info.append((color_id[i], 0, input, output, (file_num, height, width, 1), (file_num, height+(padding*2), width+(padding*2), 2), lock))
+                i =+ 1
 
-        file_num = i
 
-        print("Processing " + str(file_num) + " files")
+        print("Processing " + str(file_num) + " matrices")
 
         pool.starmap(concatMatrix, thread_info)
 
