@@ -10,3 +10,9 @@
 
 # Block dataset folder
 dataset/
+
+# Block virtual environment folder
+.venv/
+
+# Block python cache folder
+__pycache__/

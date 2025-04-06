@@ -5,11 +5,11 @@ import re
 import os
 import multiprocessing
 
-input_directory = "D:/Escolar/DatasetFCN/inputFCN/"
-output_directory = "D:/Escolar/DatasetFCN/outputFCN/"
+root = 'dataset/'
+input_directory = root+"inputFCN/"
+output_directory = root+"outputFCN/"
 file_num = 0
-root = 'C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/dataset/'
-padding = 3
+mod = 16
 color_keyword_dict = {"aliceblue": "#F0F8FF",
     "antiquewhite": "#FAEBD7",
     "aqua": "#00FFFF",
@@ -162,12 +162,12 @@ color_keyword_dict = {"aliceblue": "#F0F8FF",
 def parseColor(color_str):
     if color_str.startswith("#"):
         color_str = color_str.lstrip("#")
-        if len(color_str) == 3:  # Expandir colores como #FFF a #FFFFFF
+        if len(color_str) == 3:
             color_str = "".join(c*2 for c in color_str)
         return tuple(int(color_str[i:i+2], 16) for i in (0, 2, 4))
     elif color_str.startswith("rgb"):
-        return tuple(map(int, re.findall(r"\d+", color_str)))  # Extraer valores RGB
-    return (-1, -1, -1)  # Negro por defecto si no se encuentra un color válido
+        return tuple(map(int, re.findall(r"\d+", color_str)))
+    return (-1, -1, -1)
 
 def compareColors(color1, color2):
     if(color1[0] == color2[0] and color1[1] == color2[1] and color1[2] == color2[2]):
@@ -179,7 +179,7 @@ def findColors(file):
 
     with open(file, "r", encoding="utf-8") as f:
         for line in f:
-            x = re.findall("\.fil[0-9]+", line)
+            x = re.findall("\.fil[1-9]+", line)
             if(x):
                 key = x[0][1:]
                 y = re.findall(r"\#[0-9A-F]{6}", line)
@@ -195,15 +195,13 @@ def findColors(file):
     return color_amount
 
 def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
-    print(output)
-    fcn_input = []
-    fcn_output = []
+    print(output[len(f"{root}output/"):-6])
     paths, attributes = svg2paths(output)
     color_classes = {}
 
     with open(output, "r", encoding="utf-8") as f:
         for line in f:
-            x = re.findall("\.fil[0-9]+", line)
+            x = re.findall(r"\.fil[0-9]+", line)
             if(x):
                 key = x[0][1:]
                 y = re.findall(r"\#[0-9A-F]{6}", line)
@@ -213,32 +211,24 @@ def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
                     y = re.search(r"{fill:(\w+)", line)
                     if(y and y.group(1) != "none"):
                         color_classes[key] = parseColor(color_keyword_dict[y.group(1)])
-                    else:
-                        print("Wrong color class format")
-                        print(line)
+                    # else:
+                    #     print("Wrong color class format")
+                    #     print(line)
 
     img_pil = Image.open(input)
-    width, heigth = img_pil.size
+    width, height = img_pil.size
+    io_height = height + mod + (height % mod)
+    io_width = width + mod + (width % mod)
+    input_matrix = np.zeros((io_height, io_width, 1))
+    output_matrix = np.stack((np.zeros((io_height, io_width)), np.zeros((io_height, io_width)), np.ones((io_height, io_width))), axis=-1)
 
-    x_se = {}
-    y_se= {}
-    x_control ={}
-    y_control ={}
-    original_arrays = {}
-    output_arrays_se = {}
-    output_arrays_control = {}
-
-    for color in color_classes.keys():
-        x_se[color] = []
-        y_se[color] = []
-        x_control[color] = []
-        y_control[color] = []
-        original_arrays[color] = np.zeros((heigth, width))
-        output_arrays_se[color] = np.pad(original_arrays[color], pad_width=3, mode='constant', constant_values=0)
-        output_arrays_control[color] = np.pad(original_arrays[color], pad_width=3, mode='constant', constant_values=0)
-
+    x_se =  []
+    y_se=  []
+    x_control = []
+    y_control = []
     x_lim = [paths[0][0].start.real, paths[0][0].start.real]
     y_lim = [0-paths[0][0].start.real, 0-paths[0][0].start.imag]
+
     for i in range(len(paths)):
         classes = attributes[i]["class"].split()
         is_none = True
@@ -250,11 +240,6 @@ def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
         if(is_none):
             continue
         for curve in paths[i]:
-            x_se[usefull_class].append(curve.start.real)
-            y_se[usefull_class].append(0-curve.start.imag)
-            x_se[usefull_class].append(curve.end.real)
-            y_se[usefull_class].append(0-curve.end.imag)
-
             if(curve.start.real > x_lim[1]):
                 x_lim[1] = curve.start.real
             if(curve.end.real > x_lim[1]):
@@ -273,49 +258,51 @@ def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
             if(0-curve.end.imag > y_lim[1]):
                 y_lim[1] = 0-curve.end.imag
 
-            if(hasattr(curve, 'control1')):
-                x_control[usefull_class].append(curve.control1.real)
-                y_control[usefull_class].append(0-curve.control1.imag)
-            if(hasattr(curve, 'control2')):
-                x_control[usefull_class].append(curve.control2.real)
-                y_control[usefull_class].append(0-curve.control2.imag)
+            if(usefull_class != 'fil0'):
+                x_se.append(curve.start.real)
+                y_se.append(0-curve.start.imag)
+                x_se.append(curve.end.real)
+                y_se.append(0-curve.end.imag)
+
+                if(hasattr(curve, 'control1')):
+                    x_control.append(curve.control1.real)
+                    y_control.append(0-curve.control1.imag)
+                if(hasattr(curve, 'control2')):
+                    x_control.append(curve.control2.real)
+                    y_control.append(0-curve.control2.imag)
 
     img = np.array(img_pil)
     img[0][0] = img[0][1]
 
-    for i in range(heigth):
+    for i in range(height):
         for j in range(width):
             for key, color in color_classes.items():
-                if(compareColors(img[i][j], color)):
-                    original_arrays[key][i][j] = 1
+                if(key != 'fil0' and compareColors(img[i][j], color)):
+                    input_matrix[i][j][0] = 1
 
-    for key in color_classes.keys():
-        for i in range(len(x_se[key])):
-            x = int((x_se[key][i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
-            y = int((0-y_se[key][i]+y_lim[1])*(heigth-1)/(y_lim[1]-y_lim[0]))
-            output_arrays_se[key][y+padding][x+padding] = 1
+    for i in range(len(x_se)):
+        x = int((x_se[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_se[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][0] = 1
+        output_matrix[y][x][2] = 0
 
-        for i in range(len(x_control[key])):
-            x = int((x_control[key][i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
-            y = int((0-y_control[key][i]+y_lim[1])*(heigth-1)/(y_lim[1]-y_lim[0]))
-            output_arrays_control[key][y+padding][x+padding] = 1
-
-    for key in color_classes.keys():
-        fcn_input.append(original_arrays[key])
-        fcn_output.append(np.stack((output_arrays_se[key], output_arrays_control[key]), axis=-1))
+    for i in range(len(x_control)):
+        x = int((x_control[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_control[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][1] = 1
+        output_matrix[y][x][2] = 0
 
     with lock:
         save_memmap = np.memmap(input_directory+f"{idn}.npy", mode="r+", shape=input_shape)
-        for i in range(len(fcn_input)):
-            save_memmap[idx+i] = np.expand_dims(fcn_input[i], axis=-1)
+        save_memmap[idx] = input_matrix
         save_memmap.flush()
         save_memmap_o = np.memmap(output_directory+f"{idn}.npy", mode="r+", shape=output_shape)
-        for i in range(len(fcn_input)):
-            save_memmap_o[idx+i] = fcn_output[i]
+        save_memmap_o[idx] = output_matrix
         save_memmap_o.flush()
 
 
 if __name__ == "__main__":
+    dataset_sufix = 0
     multiprocessing.freeze_support()
 
     with multiprocessing.Manager() as manager:
@@ -328,29 +315,29 @@ if __name__ == "__main__":
 
         width = 0
         height = 0
-        color_id = []
         directory = os.fsencode(root+"output/")
         file_num = 0
         for file in os.listdir(directory):
             filename = os.fsdecode(file)[:-4]
-            if filename.endswith('_0'):
-                color_id.append(file_num)
-                colors = findColors(root+"output/"+filename+'.svg')
-                file_num += colors
+            if filename.endswith(f'_{dataset_sufix}'):
                 i += 1
                 if i < 2:
                     img = Image.open(root+"input/"+filename+".png")
                     width, height = img.size
-        # np.save(input_directory+"0.npy", np.zeros((file_num, height, width, 1)))
-        # np.save(output_directory+"0.npy", np.zeros((file_num, height+(padding*2), width+(padding*2), 2)))
+        file_num = i
+        io_height = height + mod + (height % mod)
+        io_width = width + mod + (width % mod)
+        input_shape = (file_num, io_height, io_width, 1)
+        output_shape = (file_num, io_height, io_width, 3)
+        np.memmap(input_directory+f"{dataset_sufix}.npy", mode="w+", shape=input_shape)
+        np.memmap(output_directory+f"{dataset_sufix}.npy", mode="w+", shape=output_shape)
         i = 0
-        print(color_id)
         for file in os.listdir(directory):
             filename = os.fsdecode(file)[:-4]
-            if filename.endswith('_0'):
+            if filename.endswith(f'_{dataset_sufix}'):
                 input = root+'input/'+filename+'.png'
                 output = root+'output/'+os.fsdecode(file)
-                thread_info.append((color_id[i], 0, input, output, (file_num, height, width, 1), (file_num, height+(padding*2), width+(padding*2), 2), lock))
+                thread_info.append((i, dataset_sufix, input, output, input_shape, output_shape, lock))
                 i =+ 1
 
 
