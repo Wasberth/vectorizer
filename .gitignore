@@ -16,3 +16,6 @@ dataset/
 
 # Block python cache folder
 __pycache__/
+
+# Block models folder
+models/
