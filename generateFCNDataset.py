@@ -194,7 +194,7 @@ def findColors(file):
                         print(line)
     return color_amount
 
-def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
+def concatMatrixFCN(idx, idn, input, output, input_shape, output_shape, lock):
     print(output[len(f"{root}output/"):-6])
     paths, attributes = svg2paths(output)
     color_classes = {}
@@ -300,8 +300,115 @@ def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
         save_memmap_o[idx] = output_matrix
         save_memmap_o.flush()
 
+def concatMatrixCNN(idx, idn, input, output, input_shape, output_shape, lock):
+    print(output[len(f"{root}output/"):-6])
+    paths, attributes = svg2paths(output)
+    color_classes = {}
+
+    with open(output, "r", encoding="utf-8") as f:
+        for line in f:
+            x = re.findall(r"\.fil[0-9]+", line)
+            if(x):
+                key = x[0][1:]
+                y = re.findall(r"\#[0-9A-F]{6}", line)
+                if(y):
+                    color_classes[key] = parseColor(y[0])
+                else:
+                    y = re.search(r"{fill:(\w+)", line)
+                    if(y and y.group(1) != "none"):
+                        color_classes[key] = parseColor(color_keyword_dict[y.group(1)])
+                    # else:
+                    #     print("Wrong color class format")
+                    #     print(line)
+
+    img_pil = Image.open(input)
+    width, height = img_pil.size
+    io_height = height + mod + (height % mod)
+    io_width = width + mod + (width % mod)
+    input_matrix = np.zeros((io_height, io_width, 1))
+    output_matrix = np.stack((np.zeros((io_height, io_width)), np.zeros((io_height, io_width)), np.ones((io_height, io_width))), axis=-1)
+
+    x_se =  []
+    y_se=  []
+    x_control = []
+    y_control = []
+    x_lim = [paths[0][0].start.real, paths[0][0].start.real]
+    y_lim = [0-paths[0][0].start.real, 0-paths[0][0].start.imag]
+
+    for i in range(len(paths)):
+        classes = attributes[i]["class"].split()
+        is_none = True
+        usefull_class = classes[0]
+        for c in classes:
+            if(c in color_classes.keys()):
+                is_none = False
+                usefull_class = c
+        if(is_none):
+            continue
+        for curve in paths[i]:
+            if(curve.start.real > x_lim[1]):
+                x_lim[1] = curve.start.real
+            if(curve.end.real > x_lim[1]):
+                x_lim[1] = curve.end.real
+            if(0-curve.start.imag < y_lim[0]):
+                y_lim[0] = 0-curve.start.imag
+            if(0-curve.end.imag < y_lim[0]):
+                y_lim[0] = 0-curve.end.imag
+                
+            if(curve.start.real < x_lim[0]):
+                x_lim[0] = curve.start.real
+            if(curve.end.real < x_lim[0]):
+                x_lim[0] = curve.end.real
+            if(0-curve.start.imag > y_lim[1]):
+                y_lim[1] = 0-curve.start.imag
+            if(0-curve.end.imag > y_lim[1]):
+                y_lim[1] = 0-curve.end.imag
+
+            if(usefull_class != 'fil0'):
+                x_se.append(curve.start.real)
+                y_se.append(0-curve.start.imag)
+                x_se.append(curve.end.real)
+                y_se.append(0-curve.end.imag)
+
+                if(hasattr(curve, 'control1')):
+                    x_control.append(curve.control1.real)
+                    y_control.append(0-curve.control1.imag)
+                if(hasattr(curve, 'control2')):
+                    x_control.append(curve.control2.real)
+                    y_control.append(0-curve.control2.imag)
+
+    img = np.array(img_pil)
+    img[0][0] = img[0][1]
+
+    for i in range(height):
+        for j in range(width):
+            for key, color in color_classes.items():
+                if(key != 'fil0' and compareColors(img[i][j], color)):
+                    input_matrix[i][j][0] = 1
+
+    for i in range(len(x_se)):
+        x = int((x_se[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_se[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][0] = 1
+        output_matrix[y][x][2] = 0
+
+    for i in range(len(x_control)):
+        x = int((x_control[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_control[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][1] = 1
+        output_matrix[y][x][2] = 0
+
+    with lock:
+        save_memmap = np.memmap(input_directory+f"{idn}.npy", mode="r+", shape=input_shape)
+        save_memmap[idx] = input_matrix
+        save_memmap.flush()
+        save_memmap_o = np.memmap(output_directory+f"{idn}.npy", mode="r+", shape=output_shape)
+        save_memmap_o[idx] = output_matrix
+        save_memmap_o.flush()
 
 if __name__ == "__main__":
+    cnn = True
+    batch_size = 32
     dataset_sufix = 0
     multiprocessing.freeze_support()
 

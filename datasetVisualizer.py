@@ -5,7 +5,7 @@ import utilsFCN
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2)
 
 dataset_sufix = 0
-test_id = 1
+test_id = 5525
 file = utilsFCN.input_directory+f'{dataset_sufix}.npy'
 input_shape = utilsFCN.getInputShape(file)
 input = np.memmap(file, mode='r', shape=input_shape)
