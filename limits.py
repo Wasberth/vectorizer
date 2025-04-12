@@ -5,7 +5,7 @@ import pickle
 import re
 from utilsFCN import checkLimits, imagToPixel, checkPadding
 
-debug = True
+debug = False
 
 root = "dataset/"
 dataset_padding = [0,0]
@@ -102,11 +102,11 @@ def checkCoordNum(window_size, dataset_sufix):
                     max_coords = h
                     fat_file = filename
         
-        print(max_coords)
-        print(fat_file)
-
         if debug:
             break
+        
+    print(max_coords)
+    print(fat_file)
 
 def cleanStrokes():
     # Si debug == True entonces no borrar
@@ -138,7 +138,6 @@ def cleanStrokes():
 
 
 if __name__ == '__main__':
-    # window = (400, 400)
-    # sufix = 0
-    # checkCoordNum(window, sufix)
-    cleanStrokes()
+    window = (400, 400)
+    sufix = 0
+    checkCoordNum(window, sufix)

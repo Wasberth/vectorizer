@@ -155,10 +155,10 @@ def createCleanModelFCN():
 if __name__ == "__main__":
     # Config
     dataset_sufix = 0
-    create_train_val_test_file = False
+    create_train_val_test_file = True
     load_model = False
     epoch = 5
-    batch_size = 8
+    batch_size = 2
 
     if create_train_val_test_file:
         shapes_dict = createFiles(dataset_sufix)
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         with strategy.scope():
             model = tf.keras.models.load_model(model_directory+'FCN.keras')
     else:
-        model = createCleanModelAutoencoder()
+        model = createCleanModelUNet()
     
     metric = 'val_accuracy'
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=model_directory+'FCN.keras',
