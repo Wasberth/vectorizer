@@ -12,9 +12,9 @@ from utilsFCN import batchGenerator, createFiles
 
 # Todavía puedes:
 # Formatear el dataset channels_first
-# Hacer líneas en vez de puntos
 # Cambiar la función de pérdida
 # Cambiar la capa final por tanh (y poner -1's en vez de 0's)
+# Hacer líneas en vez de puntos
 tf.keras.backend.set_image_data_format('channels_last')
 
 dataset_directory = 'dataset/'
@@ -22,11 +22,10 @@ input_directory = dataset_directory+"inputFCN/"
 output_directory = dataset_directory+"outputFCN/"
 use_directory = dataset_directory+"filesInUse/"
 reference_directory = os.fsencode(dataset_directory+input_directory)
-model_directory = '/home/r1_tocayo/Documents/Escolar/TT/vectorizer/models/'
+model_directory = 'models/'
 padding = 3
 
 def conv2d_bn(input_tensor, n_filters, kernel_size):
-    data_format = 'channels_last'
     x = Conv2D(filters=n_filters, kernel_size=(kernel_size, kernel_size), padding='same', kernel_initializer='he_normal')(input_tensor)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
@@ -45,34 +44,34 @@ def createCleanModelUNet():
         # Contracting path
         c1 = conv2d_bn(input_w, n_filters*1, 3)
         p1 = MaxPooling2D((2,2))(c1)
-        # p1 = Dropout(dropout*0.5)(p1)
+        p1 = Dropout(dropout*0.5)(p1)
         c2 = conv2d_bn(p1, n_filters*2, 3)
         p2 = MaxPooling2D((2,2))(c2)
-        # p2 = Dropout(dropout*0.5)(p2)
+        p2 = Dropout(dropout*0.5)(p2)
         c3 = conv2d_bn(p2, n_filters*4, 3)
         p3 = MaxPooling2D((2,2))(c3)
-        # p3 = Dropout(dropout*0.5)(p3)
+        p3 = Dropout(dropout*0.5)(p3)
         c4 = conv2d_bn(p3, n_filters*8, 3)
         p4 = MaxPooling2D((2,2))(c4)
-        # p4 = Dropout(dropout*0.5)(p4)
+        p4 = Dropout(dropout*0.5)(p4)
         c5 = conv2d_bn(p4, n_filters*16, 3)
 
         # Expansive path
         u6 = Conv2DTranspose(filters=n_filters*8, kernel_size=(3,3), strides=(2,2), padding='same')(c5)
         u6 = Concatenate(axis=-1)([u6, c4])
-        # u6 = Dropout(dropout)(u6)
+        u6 = Dropout(dropout)(u6)
         c6 = conv2d_bn(u6, n_filters*8, kernel_size=3)
         u7 = Conv2DTranspose(filters=n_filters*4, kernel_size=(3,3), strides=(2,2), padding='same')(c6)
         u7 = Concatenate(axis=-1)([u7, c3])
-        # u7 = Dropout(dropout)(u7)
+        u7 = Dropout(dropout)(u7)
         c7 = conv2d_bn(u7, n_filters*4, kernel_size=3)
         u8 = Conv2DTranspose(filters=n_filters*2, kernel_size=(3,3), strides=(2,2), padding='same')(c7)
         u8 = Concatenate(axis=-1)([u8, c2])
-        # u8 = Dropout(dropout)(u8)
+        u8 = Dropout(dropout)(u8)
         c8 = conv2d_bn(u8, n_filters*2, kernel_size=3)
         u9 = Conv2DTranspose(filters=n_filters*1, kernel_size=(3,3), strides=(2,2), padding='same')(c8)
         u9 = Concatenate(axis=-1)([u9, c1])
-        # u9 = Dropout(dropout)(u9)
+        u9 = Dropout(dropout)(u9)
         c9 = conv2d_bn(u9, n_filters*1, kernel_size=3)
 
         output = Conv2D(filters=3, kernel_size=(1,1), activation='sigmoid')(c9)
@@ -157,7 +156,7 @@ if __name__ == "__main__":
     dataset_sufix = 0
     create_train_val_test_file = True
     load_model = False
-    epoch = 5
+    epoch = 1
     batch_size = 2
 
     if create_train_val_test_file:

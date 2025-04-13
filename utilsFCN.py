@@ -9,6 +9,7 @@ dataset_directory = 'dataset/'
 input_directory = dataset_directory+"inputFCN/"
 output_directory = dataset_directory+"outputFCN/"
 use_directory = dataset_directory+"filesInUse/"
+model_directory = 'models/'
 mod = 16
 
 def drawImageFromArray(array, colors):

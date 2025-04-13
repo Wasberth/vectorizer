@@ -203,8 +203,8 @@ def concatMatrixFCN(img_pil, paths, attributes, color_classes):
     input_matrix = np.zeros((io_height, io_width, 1))
     output_matrix = np.stack((np.zeros((io_height, io_width)), np.zeros((io_height, io_width)), np.ones((io_height, io_width))), axis=-1)
 
-    x_se =  []
-    y_se=  []
+    x_se = []
+    y_se = []
     x_control = []
     y_control = []
     x_lim = [paths[0][0].start.real, paths[0][0].start.real]
@@ -254,7 +254,6 @@ def concatMatrixFCN(img_pil, paths, attributes, color_classes):
 
     img = np.array(img_pil)
     img[0][0] = img[0][1]
-    valid = False
 
     for i in range(height):
         for j in range(width):
@@ -267,7 +266,6 @@ def concatMatrixFCN(img_pil, paths, attributes, color_classes):
         y = int((0-y_se[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
         output_matrix[y][x][0] = 1
         output_matrix[y][x][2] = 0
-        valid = True
 
     for i in range(len(x_control)):
         x = int((x_control[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
@@ -275,6 +273,25 @@ def concatMatrixFCN(img_pil, paths, attributes, color_classes):
         output_matrix[y][x][1] = 1
         output_matrix[y][x][2] = 0
 
+    # Validate process
+    valid = False
+    vector_num = len(x_se)
+    se_img_num = 0
+    control_img_num = 0
+    for i in range(output_matrix.shape[0]):
+        for j in range(output_matrix.shape[1]):
+            if output_matrix[i][j][0] == 1:
+                se_img_num += 1
+                valid = True
+            if output_matrix[i][j][1] == 1:
+                control_img_num += 1
+
+    if se_img_num != (vector_num):
+        valid = False
+    
+    if control_img_num != len(x_control):
+        valid = False
+    
     return input_matrix, output_matrix, valid
 
 def printProgress(id, percentage, valid, file_id):
@@ -323,7 +340,7 @@ def generateFCNMatrix(idx, idn, input, output, input_shape, output_shape, batch_
                             if(y and y.group(1) != "none"):
                                 color_classes[j][key] = parseColor(color_keyword_dict[y.group(1)])
 
-        for j in range(batch_size):
+        for j in range(len(processing_ids)):
             input_matrices[j], output_matrices[j], valid = concatMatrixFCN(imgs[j], paths[j], attributes[j], color_classes[j])
             printProgress(thread_id, ((start+j+1)*100/len(idx)), valid, processing_outputs[j])
             if not valid:
@@ -333,11 +350,11 @@ def generateFCNMatrix(idx, idn, input, output, input_shape, output_shape, batch_
         
         with lock:
             save_memmap = np.memmap(f'{input_directory}{idn}.npy', mode='r+', shape=input_shape)
-            for use_id in range(batch_size):
+            for use_id in range(len(processing_ids)):
                 save_memmap[processing_ids[use_id]] = input_matrices[use_id]
             save_memmap.flush()
             save_memmap = np.memmap(f'{output_directory}{idn}.npy', mode='r+', shape=output_shape)
-            for use_id in range(batch_size):
+            for use_id in range(len(processing_ids)):
                 save_memmap[processing_ids[use_id]] = output_matrices[use_id]
             save_memmap.flush()
 
