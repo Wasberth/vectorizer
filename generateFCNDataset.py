@@ -4,6 +4,8 @@ import numpy as np
 import re
 import os
 import multiprocessing
+import sys
+import time
 
 root = 'dataset/'
 input_directory = root+"inputFCN/"
@@ -194,7 +196,172 @@ def findColors(file):
                         print(line)
     return color_amount
 
-def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
+def concatMatrixFCN(img_pil, paths, attributes, color_classes):
+    width, height = img_pil.size
+    io_height = height + mod + (height % mod)
+    io_width = width + mod + (width % mod)
+    input_matrix = np.zeros((io_height, io_width, 1))
+    output_matrix = np.stack((np.zeros((io_height, io_width)), np.zeros((io_height, io_width)), np.ones((io_height, io_width))), axis=-1)
+
+    x_se = []
+    y_se = []
+    x_control = []
+    y_control = []
+    x_lim = [paths[0][0].start.real, paths[0][0].start.real]
+    y_lim = [0-paths[0][0].start.real, 0-paths[0][0].start.imag]
+
+    for i in range(len(paths)):
+        classes = attributes[i]["class"].split()
+        is_none = True
+        usefull_class = classes[0]
+        for c in classes:
+            if(c in color_classes.keys()):
+                is_none = False
+                usefull_class = c
+        if(is_none):
+            continue
+        for curve in paths[i]:
+            if(curve.start.real > x_lim[1]):
+                x_lim[1] = curve.start.real
+            if(curve.end.real > x_lim[1]):
+                x_lim[1] = curve.end.real
+            if(0-curve.start.imag < y_lim[0]):
+                y_lim[0] = 0-curve.start.imag
+            if(0-curve.end.imag < y_lim[0]):
+                y_lim[0] = 0-curve.end.imag
+                
+            if(curve.start.real < x_lim[0]):
+                x_lim[0] = curve.start.real
+            if(curve.end.real < x_lim[0]):
+                x_lim[0] = curve.end.real
+            if(0-curve.start.imag > y_lim[1]):
+                y_lim[1] = 0-curve.start.imag
+            if(0-curve.end.imag > y_lim[1]):
+                y_lim[1] = 0-curve.end.imag
+
+            if(usefull_class != 'fil0'):
+                x_se.append(curve.start.real)
+                y_se.append(0-curve.start.imag)
+                x_se.append(curve.end.real)
+                y_se.append(0-curve.end.imag)
+
+                if(hasattr(curve, 'control1')):
+                    x_control.append(curve.control1.real)
+                    y_control.append(0-curve.control1.imag)
+                if(hasattr(curve, 'control2')):
+                    x_control.append(curve.control2.real)
+                    y_control.append(0-curve.control2.imag)
+
+    img = np.array(img_pil)
+    img[0][0] = img[0][1]
+
+    for i in range(height):
+        for j in range(width):
+            for key, color in color_classes.items():
+                if(key != 'fil0' and compareColors(img[i][j], color)):
+                    input_matrix[i][j][0] = 1
+
+    for i in range(len(x_se)):
+        x = int((x_se[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_se[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][0] = 1
+        output_matrix[y][x][2] = 0
+
+    for i in range(len(x_control)):
+        x = int((x_control[i]-x_lim[0])*(width-1)/(x_lim[1]-x_lim[0]))
+        y = int((0-y_control[i]+y_lim[1])*(height-1)/(y_lim[1]-y_lim[0]))
+        output_matrix[y][x][1] = 1
+        output_matrix[y][x][2] = 0
+
+    # Validate process
+    valid = False
+    vector_num = len(x_se)
+    se_img_num = 0
+    control_img_num = 0
+    for i in range(output_matrix.shape[0]):
+        for j in range(output_matrix.shape[1]):
+            if output_matrix[i][j][0] == 1:
+                se_img_num += 1
+                valid = True
+            if output_matrix[i][j][1] == 1:
+                control_img_num += 1
+
+    if se_img_num != (vector_num):
+        valid = False
+    
+    if control_img_num != len(x_control):
+        valid = False
+    
+    return input_matrix, output_matrix, valid
+
+def printProgress(id, percentage, valid, file_id):
+    sys.stdout.write(f"\033[{id + 1};0H")  # Mueve el cursor
+    sys.stdout.write(f"\033[K")  # Limpia la línea
+    print_string = f"Proceso {id}: {percentage}% completado"
+    if not valid:
+        print_string = f"Proceso {id}: {percentage}% completado, pero puede que no sea valido ({file_id})"
+    sys.stdout.write(print_string)
+    sys.stdout.flush()
+
+def generateFCNMatrix(idx, idn, input, output, input_shape, output_shape, batch_size, thread_id, lock):
+    iterations = int(np.ceil(len(idx)/batch_size))
+    start = 0
+    end = batch_size
+    for i in range(iterations):
+        if i == iterations-1:
+            processing_ids = idx[start:]
+            processing_inputs = input[start:]
+            processing_outputs = output[start:]
+        else:
+            processing_ids = idx[start:end]
+            processing_inputs = input[start:end]
+            processing_outputs = output[start:end]
+
+        imgs = [None]*batch_size
+        paths = [None]*batch_size
+        attributes = [None]*batch_size
+        color_classes = [None]*batch_size
+        input_matrices = [None]*batch_size
+        output_matrices = [None]*batch_size
+        for j in range(len(processing_ids)):
+            imgs[j] = Image.open(processing_inputs[j])
+            paths[j], attributes[j] = svg2paths(processing_outputs[j])
+            color_classes[j] = {}
+            with open(processing_outputs[j], 'r', encoding='utf-8') as f:
+                for line in f:
+                    x = re.findall(r"\.fil[0-9]+", line)
+                    if x:
+                        key = x[0][1:]
+                        y = re.findall(r"\#[0-9A-F]{6}", line)
+                        if y:
+                            color_classes[j][key] = parseColor(y[0])
+                        else:
+                            y = re.search(r"{fill:(\w+)", line)
+                            if(y and y.group(1) != "none"):
+                                color_classes[j][key] = parseColor(color_keyword_dict[y.group(1)])
+
+        for j in range(len(processing_ids)):
+            input_matrices[j], output_matrices[j], valid = concatMatrixFCN(imgs[j], paths[j], attributes[j], color_classes[j])
+            printProgress(thread_id, ((start+j+1)*100/len(idx)), valid, processing_outputs[j])
+            if not valid:
+                with open(f'{root}sus_files_{thread_id}.txt', 'a') as f:
+                    f.write(processing_outputs[j] + "\n")
+
+        
+        with lock:
+            save_memmap = np.memmap(f'{input_directory}{idn}.npy', mode='r+', shape=input_shape)
+            for use_id in range(len(processing_ids)):
+                save_memmap[processing_ids[use_id]] = input_matrices[use_id]
+            save_memmap.flush()
+            save_memmap = np.memmap(f'{output_directory}{idn}.npy', mode='r+', shape=output_shape)
+            for use_id in range(len(processing_ids)):
+                save_memmap[processing_ids[use_id]] = output_matrices[use_id]
+            save_memmap.flush()
+
+        start = end
+        end += batch_size
+
+def concatMatrixCNN(idx, idn, input, output, input_shape, output_shape, lock):
     print(output[len(f"{root}output/"):-6])
     paths, attributes = svg2paths(output)
     color_classes = {}
@@ -300,9 +467,11 @@ def concatMatrix(idx, idn, input, output, input_shape, output_shape, lock):
         save_memmap_o[idx] = output_matrix
         save_memmap_o.flush()
 
-
 if __name__ == "__main__":
+    cnn = True
+    batch_size = 32
     dataset_sufix = 0
+    print("\033[2J")
     multiprocessing.freeze_support()
 
     with multiprocessing.Manager() as manager:
@@ -312,6 +481,13 @@ if __name__ == "__main__":
 
         thread_info = []
         i = 0
+        idx = []
+        inputs = []
+        outputs = []
+        for thread in range(available_threads):
+            idx.append([])
+            inputs.append([])
+            outputs.append([])
 
         width = 0
         height = 0
@@ -320,6 +496,9 @@ if __name__ == "__main__":
         for file in os.listdir(directory):
             filename = os.fsdecode(file)[:-4]
             if filename.endswith(f'_{dataset_sufix}'):
+                idx[i%available_threads].append(i)
+                inputs[i%available_threads].append(root+'input/'+filename+'.png')
+                outputs[i%available_threads].append(root+'output/'+os.fsdecode(file))
                 i += 1
                 if i < 2:
                     img = Image.open(root+"input/"+filename+".png")
@@ -329,21 +508,17 @@ if __name__ == "__main__":
         io_width = width + mod + (width % mod)
         input_shape = (file_num, io_height, io_width, 1)
         output_shape = (file_num, io_height, io_width, 3)
+
+        for thread in range(available_threads):
+            thread_info.append((idx[thread], dataset_sufix, inputs[thread], outputs[thread], input_shape, output_shape, batch_size, thread, lock))
+
         np.memmap(input_directory+f"{dataset_sufix}.npy", mode="w+", shape=input_shape)
         np.memmap(output_directory+f"{dataset_sufix}.npy", mode="w+", shape=output_shape)
-        i = 0
-        for file in os.listdir(directory):
-            filename = os.fsdecode(file)[:-4]
-            if filename.endswith(f'_{dataset_sufix}'):
-                input = root+'input/'+filename+'.png'
-                output = root+'output/'+os.fsdecode(file)
-                thread_info.append((i, dataset_sufix, input, output, input_shape, output_shape, lock))
-                i =+ 1
-
 
         print("Processing " + str(file_num) + " matrices")
 
-        pool.starmap(concatMatrix, thread_info)
-
+        pool.starmap(generateFCNMatrix, thread_info)
         pool.close()
         pool.join()
+
+    print('Ha terminado la ejecución')

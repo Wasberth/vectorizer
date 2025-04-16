@@ -4,8 +4,8 @@ import tensorflow as tf
 import pickle
 from utilsFCN import batchGenerator
 
-fcn_dataset_directory = "D:/Escolar/DatasetFCN/"
-model_directory = 'C:/Users/sonic/Documents/USB/Escolar/TT/vectorizer/models/'
+fcn_dataset_directory = "dataset/"
+model_directory = 'models/'
 use_directory = fcn_dataset_directory+"filesInUse/"
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ dataset_directory = 'dataset/'
 input_directory = dataset_directory+"inputFCN/"
 output_directory = dataset_directory+"outputFCN/"
 use_directory = dataset_directory+"filesInUse/"
+model_directory = 'models/'
 mod = 16
 
 def drawImageFromArray(array, colors):
@@ -19,6 +20,21 @@ def drawImageFromArray(array, colors):
                 i = int(array[y][x])-1
                 img.putpixel((x, y), colors[i])
     return img
+
+def parseColor(color_str):
+    if color_str.startswith("#"):
+        color_str = color_str.lstrip("#")
+        if len(color_str) == 3:
+            color_str = "".join(c*2 for c in color_str)
+        return tuple(int(color_str[i:i+2], 16) for i in (0, 2, 4))
+    elif color_str.startswith("rgb"):
+        return tuple(map(int, re.findall(r"\d+", color_str)))
+    return (-1, -1, -1)
+
+def compareColors(color1, color2):
+    if(color1[0] == color2[0] and color1[1] == color2[1] and color1[2] == color2[2]):
+        return True
+    return False
 
 def findColors(file):
     color_amount = 0
@@ -47,12 +63,12 @@ def getInputShape(file):
     for f in os.listdir(directory):
         file_name = os.fsdecode(f)[:-4]
         if file_name.endswith('_'+file_sufix):
-            num_matrix += findColors(dataset_directory+'output/'+file_name+'.svg')
+            num_matrix += 1
             if width == 0 or height == 0:
                 img = Image.open(dataset_directory+"input/"+file_name+".png")
                 width, height = img.size
-    height = height + (height % mod)
-    width = width + (width % mod)
+    height = height + mod + (height % mod)
+    width = width + mod + (width % mod)
     return (num_matrix, height, width, channels)
 
 def saveLowRAM(directory, file, ids, original):
@@ -78,10 +94,10 @@ def createFiles(dataset_sufix):
     id_val, id_test = train_test_split(id_temp, train_size=0.5, random_state=42)
 
     shapes_dict["train_input"] = saveLowRAM(use_directory, 'train_input', id_train, X)
-    shapes_dict["val_input"] = saveLowRAM(use_directory, 'val_input', id_train, X)
-    shapes_dict["test_input"] = saveLowRAM(use_directory, 'test_input', id_val, X)
-    shapes_dict["train_output"] = saveLowRAM(use_directory, 'train_output', id_val, Y)
-    shapes_dict["val_output"] = saveLowRAM(use_directory, 'val_output', id_test, Y)
+    shapes_dict["val_input"] = saveLowRAM(use_directory, 'val_input', id_val, X)
+    shapes_dict["test_input"] = saveLowRAM(use_directory, 'test_input', id_test, X)
+    shapes_dict["train_output"] = saveLowRAM(use_directory, 'train_output', id_train, Y)
+    shapes_dict["val_output"] = saveLowRAM(use_directory, 'val_output', id_val, Y)
     shapes_dict["test_output"] = saveLowRAM(use_directory, 'test_output', id_test, Y)
     
     with open(use_directory+"shapes.pkl", "wb") as dict_file:
@@ -100,3 +116,25 @@ def batchGenerator(X, Y, batch_size=32):
             X_batch = np.copy(X[batch_indices])
             Y_batch = np.copy(Y[batch_indices])
             yield X_batch, Y_batch
+
+def checkLimits(coordenate, limits):
+    if(coordenate < limits[0]):
+        limits[0] = coordenate
+    if(coordenate > limits[1]):
+        limits[1] = coordenate
+    return limits
+
+def imagToPixel(point, height, width, xlim, ylim):
+    factor = width/(xlim[1]-xlim[0])
+    x = int((point.real-xlim[0])*factor)
+    factor = height/(ylim[1]-ylim[0])
+    y = int((point.imag-ylim[0])*factor)
+    return [x, y]
+
+def checkPadding(coordenate, padding, limit):
+    if(coordenate < 0):
+        if(0-coordenate > padding):
+            return 0-coordenate
+    if(coordenate-limit > padding):
+        return coordenate-limit
+    return padding

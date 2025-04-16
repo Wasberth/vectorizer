@@ -5,16 +5,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import numpy as np
 import os
 from tensorflow import optimizers
-from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D, Dropout, Activation, Conv2DTranspose, Concatenate
+from tensorflow.keras.layers import Conv2D, BatchNormalization, MaxPooling2D, Dropout, Activation, Conv2DTranspose, Concatenate, UpSampling2D
 import tensorflow as tf
 import pickle
 from utilsFCN import batchGenerator, createFiles
 
 # Todavía puedes:
 # Formatear el dataset channels_first
-# Hacer líneas en vez de puntos
 # Cambiar la función de pérdida
 # Cambiar la capa final por tanh (y poner -1's en vez de 0's)
+# Hacer líneas en vez de puntos
 tf.keras.backend.set_image_data_format('channels_last')
 
 dataset_directory = 'dataset/'
@@ -22,19 +22,18 @@ input_directory = dataset_directory+"inputFCN/"
 output_directory = dataset_directory+"outputFCN/"
 use_directory = dataset_directory+"filesInUse/"
 reference_directory = os.fsencode(dataset_directory+input_directory)
-model_directory = '/home/r1_tocayo/Documents/Escolar/TT/vectorizer/models/'
+model_directory = 'models/'
 padding = 3
 
 def conv2d_bn(input_tensor, n_filters, kernel_size):
-    data_format = 'channels_last'
     x = Conv2D(filters=n_filters, kernel_size=(kernel_size, kernel_size), padding='same', kernel_initializer='he_normal')(input_tensor)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Conv2D(filters=n_filters, kernel_size=(kernel_size, kernel_size), padding='same', kernel_initializer='he_normal')(x)
     return x
 
-def createCleanModel():
-    input_shape = (1440, 1088, 1)
+def createCleanModelUNet():
+    input_shape = (None, None, 1)
     n_filters = 32
     dropout = 0.05
     gpus = tf.config.list_logical_devices('GPU')
@@ -77,7 +76,74 @@ def createCleanModel():
 
         output = Conv2D(filters=3, kernel_size=(1,1), activation='sigmoid')(c9)
         model = tf.keras.models.Model(input_w, output)
+        loss = tf.keras.losses.BinaryCrossentropy()
+        accuracy = tf.keras.metrics.Accuracy()
+        recall = tf.keras.metrics.Recall()
+        iou = tf.keras.metrics.IoU(num_classes=2, target_class_ids=[1])
+
+        model.compile(optimizer=optimizers.Adam(learning_rate=0.001), metrics=[accuracy, recall, iou], loss=loss)
+    return model
+
+def createCleanModelAutoencoder():
+    input_shape = (None, None, 1)
+    gpus = tf.config.list_logical_devices('GPU')
+    strategy = tf.distribute.MirroredStrategy(gpus)
+    base_filters = 8
+    with strategy.scope():
+        input_w = tf.keras.layers.Input(shape=input_shape)
+
+        # Encoding
+        w = Conv2D(filters=base_filters, kernel_size=(32,32), padding='same', activation='relu')(input_w)
+        w = MaxPooling2D((2,2))(w)
+        w = Conv2D(filters=base_filters*2, kernel_size=(16,16), padding='same', activation='relu')(w)
+        w = MaxPooling2D((2,2))(w)
+        w = Conv2D(filters=base_filters*4, kernel_size=(8,8), padding='same', activation='relu')(w)
+        w = MaxPooling2D((2,2))(w)
+        w = Conv2D(filters=base_filters*8, kernel_size=(4,4), padding='same', activation='relu')(w)
+        w = MaxPooling2D((2,2))(w)
+
+        # Bottle neck
+        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
+        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
+        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
+        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
+        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
+
+        # Decoding
+        w = UpSampling2D(size=(2,2))(w)
+        w = Conv2D(filters=base_filters*4, kernel_size=(4,4), padding='same', activation='relu')(w)
+        w = UpSampling2D(size=(2,2))(w)
+        w = Conv2D(filters=base_filters*2, kernel_size=(8,8), padding='same', activation='relu')(w)
+        w = UpSampling2D(size=(2,2))(w)
+        w = Conv2D(filters=base_filters, kernel_size=(16,16), padding='same', activation='relu')(w)
+        w = UpSampling2D(size=(2,2))(w)
+
+        output = Conv2D(filters=3, kernel_size=(1,1), activation='sigmoid')(w)
+        model = tf.keras.models.Model(input_w, output)
         loss = tf.keras.losses.BinaryFocalCrossentropy()
+        accuracy = tf.keras.metrics.Accuracy()
+        recall = tf.keras.metrics.Recall()
+        iou = tf.keras.metrics.IoU(num_classes=2, target_class_ids=[1])
+
+        model.compile(optimizer=optimizers.Adam(learning_rate=0.001), metrics=[accuracy, recall, iou], loss=loss)
+    return model
+
+def createCleanModelFCN():
+    input_shape = (None, None, 1)
+    gpus = tf.config.list_logical_devices('GPU')
+    strategy = tf.distribute.MirroredStrategy(gpus)
+    with strategy.scope():
+        input_w = tf.keras.layers.Input(shape=input_shape)
+
+        # Encoding
+        w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(input_w)
+        w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(w)
+        w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(w)
+        w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(w)
+
+        output = Conv2D(filters=3, kernel_size=(3,3), activation='sigmoid', padding='same')(w)
+        model = tf.keras.models.Model(input_w, output)
+        loss = tf.keras.losses.BinaryCrossentropy()
         accuracy = tf.keras.metrics.Accuracy()
         recall = tf.keras.metrics.Recall()
         iou = tf.keras.metrics.IoU(num_classes=2, target_class_ids=[1])
@@ -88,7 +154,7 @@ def createCleanModel():
 if __name__ == "__main__":
     # Config
     dataset_sufix = 0
-    create_train_val_test_file = False
+    create_train_val_test_file = True
     load_model = False
     epoch = 1
     batch_size = 2
@@ -125,7 +191,7 @@ if __name__ == "__main__":
         with strategy.scope():
             model = tf.keras.models.load_model(model_directory+'FCN.keras')
     else:
-        model = createCleanModel()
+        model = createCleanModelUNet()
     
     metric = 'val_accuracy'
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=model_directory+'FCN.keras',
