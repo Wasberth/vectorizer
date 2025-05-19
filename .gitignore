@@ -19,3 +19,6 @@ __pycache__/
 
 # Block models folder
 models/
+
+# Block vscode config
+.vscode/

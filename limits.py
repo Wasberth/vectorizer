@@ -4,6 +4,9 @@ import os
 import pickle
 import re
 from utilsFCN import checkLimits, imagToPixel, checkPadding
+import utilsCNN
+import numpy as np
+import matplotlib.pyplot as plt
 
 debug = False
 
@@ -109,7 +112,6 @@ def checkCoordNum(window_size, dataset_sufix):
     print(fat_file)
 
 def cleanStrokes():
-    # Si debug == True entonces no borrar
     directory = os.fsencode(root+"output/")
     stroke_files = []
     for file in os.listdir(directory):
@@ -136,8 +138,103 @@ def cleanStrokes():
     with open(root+'stroke_files.pkl', 'wb') as pkl:
         pickle.dump(stroke_files, pkl)
 
+def coordHistogram(dataset_sufix):
+    directory = os.fsencode(root+"output/")
+    histogram = []
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)[:-4]
+        regex = re.search(r'_fig_[0-9]+', filename)
+        if regex == None:
+            continue
+        output = root+'output/'+os.fsdecode(file)
+
+        paths, attributes = svg2paths(output)
+        coord_num = 0
+        for path in paths:
+            for curve in path:
+                coord_num += 1                
+                if hasattr(curve, 'control1'):
+                    coord_num += 1
+                if hasattr(curve, 'control2'):
+                    coord_num += 1
+        
+        if coord_num <= 30:
+            histogram.append(coord_num)
+        
+        if debug:
+            break
+    
+    print(len(histogram))
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.hist(histogram)
+    ax2.boxplot(histogram)
+    plt.show()
+
+def getCoordNumAllImage():
+    directory = os.fsencode(root+'output/')
+    max_coord = 0
+    fat_file = ''
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)[:-4]
+        regex = re.search(r'_fig_[0-9]+', filename)
+        if regex == None:
+            continue
+        output = f'{root}output/{filename}.svg'
+        paths, attributes = svg2paths(output)
+        coord_num = 0
+        for path in paths:
+            for curve in path:
+                coord_num += 1
+                if hasattr(curve, 'control1'):
+                    coord_num += 1
+                if hasattr(curve, 'control2'):
+                    coord_num += 1
+        
+        if coord_num > max_coord:
+            max_coord = coord_num
+            fat_file = filename
+            print(max_coord)
+            print(fat_file)
+    
+    print(max_coord)
+    print(fat_file)
+
+def deleteFatFiles(coord_limit):
+    directory = os.fsencode(root+'output/')
+    fat_files = []
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)[:-4]
+        regex = re.search(r'_fig_[0-9]+', filename)
+        if regex == None:
+            continue
+        output = f'{root}output/{filename}.svg'
+        paths, attributes = svg2paths(output)
+        coord_num = 0
+        for path in paths:
+            for curve in path:
+                coord_num += 1
+                if hasattr(curve, 'control1'):
+                    coord_num += 1
+                if hasattr(curve, 'control2'):
+                    coord_num += 1
+        
+        if coord_num > coord_limit:
+            fat_files.append(filename)
+    
+    for file in fat_files:
+        print(f'Se borrará {file}')
+        input = f'{root}input/{file}.png'
+        output = f'{root}output/{file}.svg'
+        if not debug:
+            os.remove(input)
+            os.remove(output)
+    print(f'Se borraron {len(fat_files)} archivos')
+
+def validate_blank(filename, shape, axis, dtype):
+    input_matrix = np.memmap(filename, dtype=dtype, mode='r', shape=shape)
+    blank_indices = np.where(np.all(input_matrix == 0, axis=axis))[0]
+    print(f'El {filename} tiene ceros en:', blank_indices)
 
 if __name__ == '__main__':
-    window = (400, 400)
-    sufix = 0
-    checkCoordNum(window, sufix)
+    coordHistogram(0)

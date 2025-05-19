@@ -12,7 +12,6 @@ from utilsFCN import batchGenerator, createFiles
 
 # Todavía puedes:
 # Formatear el dataset channels_first
-# Cambiar la función de pérdida
 # Cambiar la capa final por tanh (y poner -1's en vez de 0's)
 # Hacer líneas en vez de puntos
 tf.keras.backend.set_image_data_format('channels_last')
