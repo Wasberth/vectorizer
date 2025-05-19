@@ -1,0 +1,39 @@
+class LocalDenseLayer(tf.keras.layers.Layer):
+    def __init__(self, units=1000, connections=6, **kwargs):
+        """
+        Capa densa local con conectividad modular entre neuronas.
+        :param units: Número de neuronas de entrada y salida.
+        :param connections: Número total de conexiones por neurona (por ejemplo 6).
+        """
+        super(LocalDenseLayer, self).__init__(**kwargs)
+        assert connections % 2 == 0, "El número de conexiones debe ser par"
+
+        self.units = units
+        self.connections = connections
+        self.offsets = np.arange(-connections // 2, connections // 2 + 1)
+        #self.offsets = self.offsets[self.offsets != 0]  # excluir conexión a sí misma
+
+    def build(self, input_shape):
+        input_dim = input_shape[-1]
+        assert input_dim == self.units, "La capa espera entradas de dimensión fija igual a units"
+
+        # Crear pesos para cada offset
+        self.kernel = self.add_weight(
+            shape=(len(self.offsets), self.units),
+            initializer="glorot_uniform",
+            trainable=True,
+            name="kernel"
+        )
+        self.bias = self.add_weight(
+            shape=(self.units,),
+            initializer="zeros",
+            trainable=True,
+            name="bias"
+        )
+
+    def call(self, inputs):
+        outputs = tf.zeros_like(inputs)
+        for i, offset in enumerate(self.offsets):
+            rolled = tf.roll(inputs, shift=-offset, axis=1)  # desplazamiento modular
+            outputs += rolled * tf.expand_dims(self.kernel[i], axis=0)
+        return outputs + self.bias
