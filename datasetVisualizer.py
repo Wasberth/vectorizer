@@ -13,35 +13,40 @@ import re
 
 from generateCNNDataset import concatMatrixCNN
 
-def show_predictions(expected, predicted, channel):
+def show_predictions(expected, predicted, channel, fig_title):
     fig, (ax1, ax2) = plt.subplots(1,2)
-    colors = [(0,0,0), (255,255,255)]
+    fig.suptitle(fig_title)
     ax1.set_title('Canal esperado')
     ax2.set_title('Canal predicho')
+    colors = [[255,255,255], [0,0,0]]
     ax1.imshow(utilsFCN.drawImageFromArray(expected[channel], colors))
+    colors = [[0,0,0], [255,255,255]]
     ax2.imshow(utilsFCN.drawImageFromArray(predicted[channel], colors))
     plt.show()
 
-# def visualize_model(predict_id):
-#     with open(utilsFCN.use_directory+'shapes.pkl', 'rb') as dict_file:
-#         shape_dict = pickle.load(dict_file)
-#     test_input_shape = shape_dict['test_input']
-#     test_output_shape = shape_dict['test_output']
-#     model = tf.keras.models.load_model(utilsFCN.model_directory+'FCN.keras')
-# 
-#     test_input = np.memmap(utilsFCN.use_directory+'test_input.npy', mode='r', shape=test_input_shape)
-#     test_output = np.memmap(utilsFCN.use_directory+'test_output.npy', mode='r', shape=test_output_shape)
-# 
-#     test_img = test_input[predict_id]
-#     test_img = np.expand_dims(test_img, axis=0)
-# 
-#     predicted_output = model.predict(test_img)
-#     predicted_output = np.transpose(predicted_output[0], (2, 0, 1))
-#     test = np.transpose(test_output[predict_id], (2,0,1))
-# 
-#     show_predictions(test, predicted_output, 0)
-#     show_predictions(test, predicted_output, 1)
-#     show_predictions(test, predicted_output, 2)
+def visualize_model(predict_id, model_name):
+    with open(utilsFCN.use_directory+'shapes.pkl', 'rb') as dict_file:
+        shape_dict = pickle.load(dict_file)
+    test_input_shape = shape_dict['test_input']
+    test_output_shape = shape_dict['test_output']
+    model = tf.keras.models.load_model(utilsFCN.model_directory+model_name+'.keras')
+
+    test_input = np.memmap(utilsFCN.use_directory+'test_input.npy', mode='r', shape=test_input_shape)
+    test_output = np.memmap(utilsFCN.use_directory+'test_output.npy', mode='r', shape=test_output_shape)
+
+    test_img = test_input[predict_id]
+    # plt.title('Input')
+    # plt.imshow(utilsFCN.drawImageFromArray(test_img, colors=[[255,255,255],[0,0,0]]))
+    # plt.show()
+    test_img = np.expand_dims(test_img, axis=0)
+
+    predicted_output = model.predict(test_img)
+    predicted_output = np.transpose(predicted_output[0], (2, 0, 1))
+    test = np.transpose(test_output[predict_id], (2,0,1))
+
+    show_predictions(test, predicted_output, 0, 'Start-End points')
+    show_predictions(test, predicted_output, 1, 'Intermediate points')
+    show_predictions(test, predicted_output, 2, 'Residual points')
 
 def visualize_img(test_id):
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2)
@@ -261,7 +266,6 @@ def rebuild_image(file_id, dataset_sufix, window, vector_num):
     plt.show()
 
 def visualize_img_CNN(file_id, width, height, vector_num):
-    # Ya me dio flojera sacar el shape
     file_num = 47148
     input_shape = (file_num, width, height, 1)
     output_shape = (file_num, vector_num*3)
@@ -360,64 +364,24 @@ def visualize_CNN_prediction(predict_id, dataset):
     if not valid_output:
         print("No hay una coordenada util en la salida")
 
-# visualize_img(10)
-# visualize_model(0)
-# visualize_generation('02 con moto_fig', 0)
-# visualize_windowed_image(12, 0, (400,400), 66724)
-
-# def visualize_CNN_generation(input_matrix, output_matrix):
-#     x = []
-#     y = []
-#     for i in range(output_matrix.shape[0] // 3):
-#         if output_matrix[i*3] == -1:
-#             continue
-#         x.append(output_matrix[(i*3) + 1])
-#         y.append(-output_matrix[(i*3) + 2])
-#     fig, (ax1, ax2) = plt.subplots(1,2)
-#     ax1.set_title("Entrada")
-#     ax1.imshow(utilsCNN.drawImageFromArray(input_matrix, [(0,0,0), (255, 255, 255)]))
-#     ax2.set_title("Salida")
-#     ax2.set_xlim(0,1)
-#     ax2.set_ylim(-1,0)
-#     ax2.plot(x, y, 'o')
-#     plt.show()
-# 
-# file = '02 con moto_fig_0'
-# 
-# img = Image.open(f'dataset/input/{file}.png')
-# paths, attributes = svg2paths(f'dataset/output/{file}.svg')
-# color_classes = {}
-# with open(f'dataset/output/{file}.svg', 'r', encoding='utf-8') as f:
-#     for line in f:
-#         x = re.findall(r"\.fil[0-9]+", line)
-#         if x:
-#             key = x[0][1:]
-#             y = re.findall(r"\#[0-9A-F]{6}", line)
-#             if y:
-#                 color_classes[key] = parseColor(y[0])
-#             else:
-#                 y = re.search(r"{fill:(\w+)", line)
-#                 if(y and y.group(1) != "none"):
-#                     color_classes[key] = parseColor(color_keyword_dict[y.group(1)])
-# 
-# input_matrix, output_matrix, valid = concatMatrixCNN(img, paths, attributes, color_classes, 0)
-# 
-# print(np.min(output_matrix), np.max(output_matrix))
-# ind = np.argmax(output_matrix)
-# max_matrix = np.unravel_index(ind, output_matrix.shape)
-# print(max_matrix)
-# visualize_CNN_generation(input_matrix, output_matrix)
-
-
-# rebuild_image(0, 0, (400, 400), 66724)
-
-# visualize_img_CNN(38677, 500, 500, 1146)
-
-# visualize_CNN_prediction(100, 'test')
-
+def visualize_CNN_generation(input_matrix, output_matrix):
+    x = []
+    y = []
+    for i in range(output_matrix.shape[0] // 3):
+        if output_matrix[i*3] == -1:
+            continue
+        x.append(output_matrix[(i*3) + 1])
+        y.append(-output_matrix[(i*3) + 2])
+    fig, (ax1, ax2) = plt.subplots(1,2)
+    ax1.set_title("Entrada")
+    ax1.imshow(utilsCNN.drawImageFromArray(input_matrix, [(0,0,0), (255, 255, 255)]))
+    ax2.set_title("Salida")
+    ax2.set_xlim(0,1)
+    ax2.set_ylim(-1,0)
+    ax2.plot(x, y, 'o')
+    plt.show()
 
 def visualize_img_Transformer(file_id, width, height, vector_num):
-    # Ya me dio flojera sacar el shape
     file_num = 36427
     input_shape = (file_num, width, height, 1)
     output_shape = (file_num, vector_num*3, 2)
@@ -456,4 +420,41 @@ def visualize_img_Transformer(file_id, width, height, vector_num):
     ax2.plot(x_test, y_test, 'o')
     plt.show()
 
-visualize_img_Transformer(0, 500, 500, 14)
+# visualize_img(10)
+# visualize_model(500, 'U-Net')
+# visualize_generation('02 con moto_fig', 0)
+# visualize_windowed_image(12, 0, (400,400), 66724)
+
+# file = '02 con moto_fig_0'
+# 
+# img = Image.open(f'dataset/input/{file}.png')
+# paths, attributes = svg2paths(f'dataset/output/{file}.svg')
+# color_classes = {}
+# with open(f'dataset/output/{file}.svg', 'r', encoding='utf-8') as f:
+#     for line in f:
+#         x = re.findall(r"\.fil[0-9]+", line)
+#         if x:
+#             key = x[0][1:]
+#             y = re.findall(r"\#[0-9A-F]{6}", line)
+#             if y:
+#                 color_classes[key] = parseColor(y[0])
+#             else:
+#                 y = re.search(r"{fill:(\w+)", line)
+#                 if(y and y.group(1) != "none"):
+#                     color_classes[key] = parseColor(color_keyword_dict[y.group(1)])
+# input_matrix, output_matrix, valid = concatMatrixCNN(img, paths, attributes, color_classes, 0)
+# 
+# print(np.min(output_matrix), np.max(output_matrix))
+# ind = np.argmax(output_matrix)
+# max_matrix = np.unravel_index(ind, output_matrix.shape)
+# print(max_matrix)
+# visualize_CNN_generation(input_matrix, output_matrix)
+
+
+# rebuild_image(0, 0, (400, 400), 66724)
+
+# visualize_img_CNN(38677, 500, 500, 1146)
+
+visualize_CNN_prediction(100, 'test')
+
+# visualize_img_Transformer(0, 500, 500, 14)

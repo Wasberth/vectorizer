@@ -104,9 +104,6 @@ def createCleanModelAutoencoder():
         # Bottle neck
         w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
         w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
-        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
-        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
-        w = Conv2D(filters=base_filters*8, kernel_size=(3,3), padding='same', activation='relu')(w)
 
         # Decoding
         w = UpSampling2D(size=(2,2))(w)
@@ -134,7 +131,6 @@ def createCleanModelFCN():
     with strategy.scope():
         input_w = tf.keras.layers.Input(shape=input_shape)
 
-        # Encoding
         w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(input_w)
         w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(w)
         w = Conv2D(filters=3, kernel_size=(5,5), padding='same', activation='relu')(w)
@@ -153,10 +149,19 @@ def createCleanModelFCN():
 if __name__ == "__main__":
     # Config
     dataset_sufix = 0
-    create_train_val_test_file = True
+    create_train_val_test_file = False
     load_model = False
-    epoch = 1
-    batch_size = 2
+    epoch = 30
+    batch_size = 8
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    use_gpu = 0
+    if gpus:
+        try:
+            tf.config.experimental.set_visible_devices(gpus[use_gpu], 'GPU')
+            tf.config.experimental.set_memory_growth(gpus[use_gpu], True)
+        except RuntimeError as e:
+            print(e)
 
     if create_train_val_test_file:
         shapes_dict = createFiles(dataset_sufix)
@@ -190,7 +195,7 @@ if __name__ == "__main__":
         with strategy.scope():
             model = tf.keras.models.load_model(model_directory+'FCN.keras')
     else:
-        model = createCleanModelUNet()
+        model = createCleanModelAutoencoder()
     
     metric = 'val_accuracy'
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=model_directory+'FCN.keras',
@@ -207,3 +212,6 @@ if __name__ == "__main__":
     val_steps = X_val.shape[0] // batch_size
     
     history = model.fit(train_gen, epochs=epoch, steps_per_epoch=steps_per_epoch, validation_data=val_gen, validation_steps=val_steps, callbacks=[model_checkpoint], verbose=1)
+    
+    with open('models/performance.pkl', 'wb') as performance_file:
+        pickle.dump(history.history, performance_file)

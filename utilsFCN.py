@@ -13,12 +13,14 @@ model_directory = 'models/'
 mod = 16
 
 def drawImageFromArray(array, colors):
-    img = Image.new("RGB", (array.shape[1], array.shape[0]), colors[-1])
+    color = (colors[-1][0], colors[-1][1], colors[-1][2])
+    img = Image.new("RGB", (array.shape[1], array.shape[0]), color)
     for y in range(array.shape[0]):
         for x in range(array.shape[1]):
-            if(array[y][x] !=  0):
-                i = int(array[y][x])-1
-                img.putpixel((x, y), colors[i])
+            i = int(array[y][x])-1
+            percentage = array[y][x]
+            color = (int(colors[i][0] * percentage), int(colors[i][1] * percentage), int(colors[i][2] * percentage))
+            img.putpixel((x, y), color)
     return img
 
 def parseColor(color_str):

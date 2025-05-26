@@ -56,9 +56,9 @@ def createCleanModel(vector_num):
 if __name__ == "__main__":
     # Config
     dataset_sufix = 0
-    create_train_val_test_file = False
-    load_model = True
-    epoch = 100
+    create_train_val_test_file = True
+    load_model = False
+    epoch = 1
     batch_size = 256
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -92,10 +92,6 @@ if __name__ == "__main__":
     Y_val = np.memmap(use_directory+'val_output.npy', mode='r', dtype=np.float64, shape=shapes_dict['val_output'])
     Y_test = np.memmap(use_directory+'test_output.npy', mode='r', dtype=np.float64, shape=shapes_dict['test_output'])
     
-    # print(X_train.shape, Y_train.shape)
-    # print(X_val.shape, Y_val.shape)
-    # print(X_test.shape, Y_test.shape)
-    
     if load_model:
         gpus = tf.config.list_logical_devices('GPU')
         strategy = tf.distribute.MirroredStrategy(gpus)
@@ -122,3 +118,19 @@ if __name__ == "__main__":
     val_steps = X_val.shape[0] // batch_size
     
     history = model.fit(train_gen, epochs=epoch, steps_per_epoch=steps_per_epoch, validation_data=val_gen, validation_steps=val_steps, callbacks=[model_checkpoint], verbose=1)
+
+    with open('models/performance.pkl', 'wb') as performance_file:
+        pickle.dump(history.history, performance_file)
+
+    # x = range(1, len(mse) + 1)
+
+    # plt.plot(x, mse, label='Training MSE')
+    # plt.plot(x, v_mse, label='Validation MSE')
+    # plt.title('Convolutional neural network training loss')
+    # plt.legend()
+    # plt.figure()
+    # plt.plot(x, mae, label='Training MAE')
+    # plt.plot(x, v_mae, label='Validation MAE')
+    # plt.title('Convolutional neural network training metrics')
+    # plt.legend()
+    # plt.show()
