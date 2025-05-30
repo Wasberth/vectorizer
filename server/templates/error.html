@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %} Error {{ error_num }} {% endblock %}
+
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/error.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/button.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="container error-container">
+        <div class="text-center">
+            <h1 class="display-1 fw-bold bounce">{{ code }}</h1>
+            <h2 class="mb-4">Oops!</h2>
+            <p class="lead mb-5">{{ description }}</p>
+            <button onclick="goBack()" class="btn btn-primary btn-lg">Regresar a la página anterior</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+{% endblock %}
