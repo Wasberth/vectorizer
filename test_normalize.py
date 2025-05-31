@@ -3,13 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from sklearn.model_selection import train_test_split
-from FourierContourNN import normalize
+from FourierContourNN import normalize, preprocess_fft, inverse_preprocess_fft
 
-MODEL = 'models/NormalContNNv1_500.keras'
+MODEL = 'models/NormalContNNv2_best.keras'
 INPUT_FOLDER = 'dataset/input_samples/'
 EXPECTED_FOLDER = 'dataset/samples/'
+PREPROCESS = normalize
+POSTPROCESS = None
+TEST = True
+INDEXES = [5, 7, 9]
 
-model = tf.keras.models.load_model('models/ContNNv2.keras', compile=False)
+model = tf.keras.models.load_model(MODEL, compile=False)
 
 # Calculate Metrics
 def calculate_metrics(y_true, y_pred):
@@ -25,6 +29,11 @@ def graph(points, expected):
     predicted = model.predict(np.expand_dims(points, axis=0))
 
     _, (ax1, ax2, ax3) = plt.subplots(1, 3)
+
+    if POSTPROCESS:
+        predicted = POSTPROCESS(predicted)
+        expected = POSTPROCESS(expected)
+        points = POSTPROCESS(points)
 
     points = points.reshape((-1, 2))
     expected = expected.reshape((-1, 2))
@@ -65,8 +74,6 @@ id_val, id_test = train_test_split(id_temp, test_size=0.5, random_state=42)
 
 files_test = [files[i] for i in id_test]
 
-TEST = False
-
 x = np.zeros((len(files_test), 2000))
 y_true = np.zeros((len(files_test), 2000))
 
@@ -74,8 +81,12 @@ for i, file in enumerate(files_test):
     points = np.load(os.path.join(INPUT_FOLDER, file))
     expected = np.load(os.path.join(EXPECTED_FOLDER, file))
 
-    x[i, :] = normalize(points)
-    y_true[i, :] = normalize(expected)
+    if PREPROCESS:
+        points = PREPROCESS(points)
+        expected = PREPROCESS(expected)
+
+    x[i, :] = points
+    y_true[i, :] = expected
 
 if TEST:
     y_pred = model.predict(x)
@@ -84,7 +95,5 @@ if TEST:
     print('MAE:', mae)
     print('MSE:', mse)
 
-    graph(x[0], y_true[0])
-else:
-    index = 2
-    graph(x[index], y_true[index])
+for i in INDEXES:
+    graph(x[i], y_true[i])

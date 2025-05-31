@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
@@ -69,6 +70,7 @@ def inverse_preprocess_fft(x):
         np.ndarray: Reconstructed array of shape (2000,), where each pair of values 
                     represents real and imaginary parts.
     """
+    x = x.reshape(2000,)
     mag = x[:1000]
     phase = x[1000:]
 
@@ -100,27 +102,50 @@ def batchGenerator(files, batch_size=32, preprocess=None):
                 if preprocess:
                     X_batch.append(preprocess(x))
                     Y_batch.append(preprocess(y))
+                else:
+                    X_batch.append(x)
+                    Y_batch.append(y)
 
             yield np.array(X_batch), np.array(Y_batch)
 
-if __name__ == '__main__':
-    # === CONFIGURACIÓN GENERAL ===
-    LOAD_MODEL = True
-    MODEL_PATH = "models/NormalContNNv1_500.keras"
-    EPOCHS = 1000
-    BATCH_SIZE = 64
+def batchGenerator1by1(files, batch_size=1, preprocess=None):
+    i = 0
+    while True:
+        batch_indices = []
+        for _ in range(batch_size):
+            batch_indices.append(i)
+            i += 1
+            i %= len(files)
 
-    if LOAD_MODEL:
-        model = tf.keras.models.load_model(MODEL_PATH)
+        if len(batch_indices) < batch_size:
+            continue
+
+        X_batch = []
+        Y_batch = []
+
+        for file in batch_indices:
+            x = np.load(os.path.join(INPUT_FOLDER, files[file]))
+            y = np.load(os.path.join(OUTPUT_FOLDER, files[file]))
+            if preprocess:
+                X_batch.append(preprocess(x))
+                Y_batch.append(preprocess(y))
+            else:
+                X_batch.append(x)
+                Y_batch.append(y)
+
+        yield np.array(X_batch), np.array(Y_batch)
+
+def main(model_name, epochs, batch_size, preprocess, patience = 40, load_path = None):
+    if load_path:
+        model = tf.keras.models.load_model(load_path)
     else:
         model = build_model(input_size=2000, layers=10)
 
-    model.summary()
+    # model.summary()
 
     # === Batch generation ===
     files = os.listdir(INPUT_FOLDER)
     indices = np.arange(len(files))
-    print(len(files))
 
     id_train, id_temp = train_test_split(indices, test_size=0.3, random_state=42)
     id_val, id_test = train_test_split(id_temp, test_size=0.5, random_state=42)
@@ -128,33 +153,88 @@ if __name__ == '__main__':
     files_train = [files[i] for i in id_train]
     files_val = [files[i] for i in id_val]
     files_test = [files[i] for i in id_test]
-
-    print(len(files_train), len(files_val), len(files_test))
-
-    print(files_train)
+    print(len(files_train))
 
     # === Entrenamiento ===
-    steps_per_epoch = len(files_train) // BATCH_SIZE
-    val_steps = len(files_val) // BATCH_SIZE
-    print(steps_per_epoch, val_steps)
+    steps_per_epoch = len(files_train) // batch_size
+    val_steps = len(files_val) // batch_size
 
-    train_gen = batchGenerator(files_train, batch_size=BATCH_SIZE, preprocess=normalize)
-    val_gen = batchGenerator(files_val, batch_size=BATCH_SIZE, preprocess=normalize)
+    train_gen = batchGenerator(files_train, batch_size=batch_size, preprocess=preprocess)
+    val_gen = batchGenerator(files_val, batch_size=batch_size, preprocess=preprocess)
 
     checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-        MODEL_PATH, save_best_only=True, monitor='val_mse', verbose=1
+        f"models/{model_name}_best.keras", save_best_only=True, monitor='val_mse', verbose=1
     )
 
-    #early_stopping_cb = tf.keras.callbacks.EarlyStopping(
-    #    monitor='val_mse', patience=40, verbose=1
-    #)
+    early_stopping_cb = tf.keras.callbacks.EarlyStopping(
+        monitor='val_mse', patience=patience, verbose=1
+    )
 
     history = model.fit(
         train_gen,
-        epochs=EPOCHS,
+        epochs=epochs,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_gen,
         validation_steps=val_steps,
-        callbacks=[checkpoint_cb],# early_stopping_cb],
+        callbacks=[checkpoint_cb, early_stopping_cb],
         verbose=1
     )
+
+    # Save model
+    model.save(f"models/{model_name}.keras")
+
+    # Save history
+    mse_history = history.history['mse']
+    mae_history = history.history['mae']
+    val_mse_history = history.history['val_mse']
+    val_mae_history = history.history['val_mae']
+
+    np.save(f'history/{model_name}_val_mse.npy', val_mse_history)
+    np.save(f'history/{model_name}_val_mae.npy', val_mae_history)
+    np.save(f'history/{model_name}_mse.npy', mse_history)
+    np.save(f'history/{model_name}_mae.npy', mae_history)
+
+    # Clear plots
+    plt.clf()
+
+    # summarize history for accuracy
+    plt.plot(history.history['mae'])
+    plt.plot(history.history['val_mae'])
+    plt.title('Mean Absolute Error')
+    plt.ylabel('mae')
+    plt.xlabel('época')
+    plt.legend(['entrenamiento', 'validación'], loc='upper left')
+    plt.savefig(f'plots/{model_name}_mae.png')
+
+    # clear plot
+    plt.clf()
+
+    # summarize history for loss
+    plt.plot(history.history['mse'])
+    plt.plot(history.history['val_mse'])
+    plt.title('Mean Squared Error')
+    plt.ylabel('mse')
+    plt.xlabel('época')
+    plt.legend(['entrenamiento', 'validación'], loc='upper left')
+    plt.savefig(f'plots/{model_name}_mse.png')
+
+    # === Obtener la mejor época según val_mse (la usada por ModelCheckpoint) ===
+    best_epoch = np.argmin(history.history['val_mse'])
+
+    # Obtener métricas de esa época
+    best_mse = history.history['mse'][best_epoch]
+    best_mae = history.history['mae'][best_epoch]
+    best_val_mse = history.history['val_mse'][best_epoch]
+    best_val_mae = history.history['val_mae'][best_epoch]
+
+    return best_epoch, best_mse, best_mae, best_val_mse, best_val_mae
+
+
+if __name__ == '__main__':
+    # === CONFIGURACIÓN GENERAL ===
+    LOAD_MODEL = False
+    MODEL_NAME = 'NormalContNNv2'
+    EPOCHS = 2
+    BATCH_SIZE = 2
+
+    main(MODEL_NAME, EPOCHS, BATCH_SIZE, preprocess=preprocess_fft)

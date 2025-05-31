@@ -62,7 +62,7 @@ id_val, id_test = train_test_split(id_temp, test_size=0.5, random_state=42)
 
 files_test = [files[i] for i in id_test]
 
-model = tf.keras.models.load_model('models/ContNNv2.keras', compile=False)
+model = tf.keras.models.load_model(MODEL, compile=False)
 
 x = np.zeros((len(files_test), 2000))
 y_true = np.zeros((len(files_test), 2000))

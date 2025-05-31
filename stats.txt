@@ -1,0 +1,11 @@
+Best model for ContNNv4 was saved at epoch: 40. Best mse: 5.277908348944038e-05. Best mae: 0.004537023603916168. Best val_mse: 3.498640944599174e-05. Best val_mae: 0.0037504369392991066
+Best model for FourierContNNv2 was saved at epoch: 23. Best mse: 1.7238742113113403. Best mae: 0.917461097240448. Best val_mse: 1.7909455299377441. Best val_mae: 0.9358710050582886
+Best model for ContNNv4 was saved at epoch: 1. Best mse: 0.0002859992382582277. Best mae: 0.009892524220049381. Best val_mse: 0.0002864327689167112. Best val_mae: 0.009440794587135315
+Best model for FourierContNNv2 was saved at epoch: 1. Best mse: 2.911750555038452. Best mae: 1.2963552474975586. Best val_mse: 2.6806325912475586. Best val_mae: 1.2486649751663208
+Best model for NormalContNNv2 was saved at epoch: 1. Best mse: 0.004885632544755936. Best mae: 0.04887011647224426. Best val_mse: 0.004011429846286774. Best val_mae: 0.0425647534430027
+Best model for ContNNv4 was saved at epoch: 30. Best mse: 0.0002786997356452048. Best mae: 0.010007836855947971. Best val_mse: 4.662500214180909e-05. Best val_mae: 0.003901065094396472
+Best model for FourierContNNv2 was saved at epoch: 22. Best mse: 1.7100692987442017. Best mae: 0.9138942360877991. Best val_mse: 1.7855830192565918. Best val_mae: 0.9344226121902466
+Best model for NormalContNNv2 was saved at epoch: 39. Best mse: 0.002904410008341074. Best mae: 0.03602851182222366. Best val_mse: 0.0026330312248319387. Best val_mae: 0.032646264880895615
+Best model for ContNNv5 was saved at epoch: 41. Best mse: 0.00010401209146948531. Best mae: 0.006985840387642384. Best val_mse: 4.533762330538593e-05. Best val_mae: 0.004101261962205172
+Best model for FourierContNNv3 was saved at epoch: 65. Best mse: 1.6694962978363037. Best mae: 0.8938362002372742. Best val_mse: 1.7658554315567017. Best val_mae: 0.9183481931686401
+Best model for NormalContNNv2 was saved at epoch: 27. Best mse: 0.0027309353463351727. Best mae: 0.03420208767056465. Best val_mse: 0.0026358759496361017. Best val_mae: 0.034833874553442

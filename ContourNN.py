@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 
@@ -67,15 +68,9 @@ def batchGenerator(files, batch_size=32):
 
             yield np.array(X_batch), np.array(Y_batch)
 
-if __name__ == '__main__':
-    # === CONFIGURACIÓN GENERAL ===
-    LOAD_MODEL = False
-    MODEL_PATH = "models/ContNNv3.keras"
-    EPOCHS = 100000
-    BATCH_SIZE = 64
-
-    if LOAD_MODEL:
-        model = tf.keras.models.load_model(MODEL_PATH)
+def main(load_model, model_path, epochs, batch_size, graph_name):
+    if load_model:
+        model = tf.keras.models.load_model(model_path)
     else:
         model = build_model(input_size=2000, connections=30, layers=10)
 
@@ -98,27 +93,58 @@ if __name__ == '__main__':
     print(files_train)
 
     # === Entrenamiento ===
-    steps_per_epoch = len(files_train) // BATCH_SIZE
-    val_steps = len(files_val) // BATCH_SIZE
+    steps_per_epoch = len(files_train) // batch_size
+    val_steps = len(files_val) // batch_size
     print(steps_per_epoch, val_steps)
 
-    train_gen = batchGenerator(files_train, batch_size=BATCH_SIZE)
-    val_gen = batchGenerator(files_val, batch_size=BATCH_SIZE)
+    train_gen = batchGenerator(files_train, batch_size=batch_size)
+    val_gen = batchGenerator(files_val, batch_size=batch_size)
 
     checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
-        MODEL_PATH, save_best_only=True, monitor='loss', verbose=1
+        model_path, save_best_only=True, monitor='loss', verbose=1
     )
 
     early_stopping_cb = tf.keras.callbacks.EarlyStopping(
-        monitor='val_mse', patience=40, verbose=1
+        monitor='val_mse', patience=10, verbose=1
     )
 
     history = model.fit(
         train_gen,
-        epochs=EPOCHS,
+        epochs=epochs,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_gen,
         validation_steps=val_steps,
         callbacks=[checkpoint_cb, early_stopping_cb],
         verbose=1
     )
+
+    # summarize history for accuracy
+    plt.plot(history.history['mae'])
+    plt.plot(history.history['val_mae'])
+    plt.title('Mean Absolute Error')
+    plt.ylabel('mae')
+    plt.xlabel('época')
+    plt.legend(['entrenamiento', 'validación'], loc='upper left')
+    plt.savefig(f'plots/{graph_name}_mae.png')
+
+    # clear plot
+    plt.clf()
+
+    # summarize history for loss
+    plt.plot(history.history['mse'])
+    plt.plot(history.history['val_mse'])
+    plt.title('Mean Squared Error')
+    plt.ylabel('mse')
+    plt.xlabel('época')
+    plt.legend(['entrenamiento', 'validación'], loc='upper left')
+    plt.savefig(f'plots/{graph_name}_mse.png')
+
+if __name__ == '__main__':
+    # === CONFIGURACIÓN GENERAL ===
+    LOAD_MODEL = False
+    MODEL_NAME = 'ContNNv4'
+    MODEL_PATH = f"models/{MODEL_NAME}.keras"
+    EPOCHS = 2
+    BATCH_SIZE = 64
+
+    main(LOAD_MODEL, MODEL_PATH, EPOCHS, BATCH_SIZE, MODEL_NAME)
