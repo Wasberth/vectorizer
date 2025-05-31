@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %} VACA {% endblock %}
+{% block content %}
+  <div class="row g-0 border rounded overflow-hidden flex-md-row shadow-sm h-md-250 position-relative">
+    <div class="col-md-6 mx-auto p-1" style="height: 99svh;">
+      <img class="bd-placeholder-img h-100 w-100" src="/uploaded/original_{{filename}}" alt="Imagen original">  
+    </div>
+      <div class="col position-static mx-auto p-1" style="height: 99svh;">
+        <img class="bd-placeholder-img w-100 h-100" src="/uploaded/{{filename}}.svg" alt="Imagen vectorizada">
+      </div>
+  </div>
+  <div class="position-fixed bottom-0 end-0 rounded-circle m-5">
+    <div class="dropup btn-group">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="false">
+        Configuración
+      </button>
+      <form class="dropdown-menu p-4">
+        <h4>Agrupación</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="agrupacion" id="radioAgrup1">
+          <label class="form-check-label" for="radioAgrup1">
+            Por color
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="agrupacion" id="radioAgrup2" checked>
+          <label class="form-check-label" for="radioAgrup2">
+            No agrupar
+          </label>
+        </div>
+        <h4>Estilo de dibujo</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="estilo" id="radioEstilo1">
+          <label class="form-check-label" for="radioEstilo1">
+            Rellenar figuras
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="estilo" id="radioEstilo2" checked>
+          <label class="form-check-label" for="radioEstilo2">
+            Solo contornos
+          </label>
+        </div>
+        <h4>Rellenos de espacios</h4>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="espacios" id="radioEspacios1">
+          <label class="form-check-label" for="radioEspacios1">
+            Recortar
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="espacios" id="radioEspacios2" checked>
+          <label class="form-check-label" for="radioEspacios2">
+            Apilar
+          </label>
+        </div>
+      </form>
+    <a class="btn btn-success" href="/uploaded/{{filename}}.svg" download>
+      Descargar imagen
+    </a>
+  </div>
+  </div>
+{% endblock %}

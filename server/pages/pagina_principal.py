@@ -3,6 +3,7 @@ from decos import route
 from werkzeug.utils import secure_filename
 import os
 from dotenv import load_dotenv
+from PIL import Image
 load_dotenv()
 
 ALLOWED_EXTENSIONS = {'png'}
@@ -30,5 +31,7 @@ def get_img():
         base_path = os.path.dirname(__file__) + os.environ['upload_path']
         print(os.path.dirname(__file__))
         file.save(os.path.join(base_path, filename))
+        image = Image.open(os.path.join(base_path, filename))
+        image.save(os.path.join(base_path, 'original_'+filename))
         return redirect(url_for('preprocesamiento', name=filename))
     return redirect(request.url)

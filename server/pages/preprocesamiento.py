@@ -12,7 +12,7 @@ import json
 import subprocess
 load_dotenv()
     
-def preprocess(imagen, max_k=30, model=None):
+def preprocess(imagen, max_k=30, model=None, exact_k=0):
     """
     Preprocesa una imagen para su segmentación.
     
@@ -35,38 +35,43 @@ def preprocess(imagen, max_k=30, model=None):
     pixels_color_space = cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)
     pixels_2d = pixels_color_space.reshape(-1, 3)  # Convertir a una lista 2D de colores LAB
 
-    if model==None:
-        # Determinar el número óptimo de clusters usando el silhouette coefficient
-        silhouette_scores = []  # Lista para almacenar los valores del silhouette score
-        sample_size = len(pixels_2d)
-
-        # Log values:
-        # 
-        # 100 empieza a reducir en 650 pixeles
-        # 300 empieza a redicor en 2325 pixeles 
-        # 587.05 empieza a reducir en 5000 pixeles
-        # 1085.73 Empieza a reducir en 10000 pixeles
-        # 
-
-        sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
-
-        # Evaluar silhouette coefficient para diferentes valores de k
-        for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
-            kmeans = KMeans(n_clusters=k, random_state=22)
-            labels = kmeans.fit_predict(pixels_2d)
-            score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
-            silhouette_scores.append(score)
-
-        # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
-        optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
-
-        # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
-        kmeans = KMeans(n_clusters=optimal_k, random_state=22)
+    if exact_k != 0:
+        kmeans = KMeans(n_clusters=exact_k, random_state=22)
         kmeans.fit(pixels_2d)
         etiquetas = kmeans.labels_
     else:
-        etiquetas = model.predict(pixels_2d)
-        kmeans = model
+        if model==None:
+            # Determinar el número óptimo de clusters usando el silhouette coefficient
+            silhouette_scores = []  # Lista para almacenar los valores del silhouette score
+            sample_size = len(pixels_2d)
+
+            # Log values:
+            # 
+            # 100 empieza a reducir en 650 pixeles
+            # 300 empieza a redicor en 2325 pixeles 
+            # 587.05 empieza a reducir en 5000 pixeles
+            # 1085.73 Empieza a reducir en 10000 pixeles
+            # 
+
+            sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
+
+            # Evaluar silhouette coefficient para diferentes valores de k
+            for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
+                kmeans = KMeans(n_clusters=k, random_state=22)
+                labels = kmeans.fit_predict(pixels_2d)
+                score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
+                silhouette_scores.append(score)
+
+            # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
+            optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
+
+            # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
+            kmeans = KMeans(n_clusters=optimal_k, random_state=22)
+            kmeans.fit(pixels_2d)
+            etiquetas = kmeans.labels_
+        else:
+            etiquetas = model.predict(pixels_2d)
+            kmeans = model
     colores_clusters = kmeans.cluster_centers_
 
     # Reconstruir la imagen segmentada
@@ -123,3 +128,18 @@ def kmeans_SR(filename):
     w, h = imagen.size
     pixel_color_space = get_lab(imagen)
     return json.dumps({'estado': 'exito', 'pixels': pixel_color_space.tolist(), 'width': w, 'height': h})
+
+@route('/cambiar_colores/<filename>', methods=['POST'])
+def cambiar_colores(filename):
+    datos = json.loads(request.data)
+    imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], 'original_'+filename)
+    imagen = Image.open(imagen_path)
+    print('as')
+    imagen_procesada, model, pixel_color_space = preprocess(imagen, exact_k=int(datos['numero']))
+    w, h = imagen.size
+    pixel_count = h*w
+    if pixel_count < int(os.environ['min_pixels']):
+        imagen_procesada.save(os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename))
+        return json.dumps({'estado':'SR', 'centroides': model.cluster_centers_.tolist(), 'siguiente': url_for('imagen_sr', filename=filename)})
+    else:
+        return json.dumps({'estado': 'exito', 'centroides': model.cluster_centers_.tolist(), 'pixels': pixel_color_space.tolist(), 'width': w, 'height': h})

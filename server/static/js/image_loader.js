@@ -5,6 +5,7 @@ let loading_text = document.getElementById('loading-text');
 let url = image_tag.getAttribute('loading-url');
 let img_canvas = document.getElementById('img-canvas');
 let loaded = false;
+let sending = false;
 
 function labToRgb(l_opencv, a_opencv, b_opencv) {
     // Desnormalizar a LAB real
@@ -160,12 +161,12 @@ function get_SR(){
             image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
             loading_text.innerHTML = 'Limpiando resultados';
             url = data.siguiente;
-            get_image_SR()
+            get_image_SR();
         }
     })
     .catch(error => {
-        console.error('Algo salió mal ', error)
-    })
+        console.error('Algo salió mal ', error);
+    });
 }
 
 function get_image_SR(){
@@ -187,12 +188,89 @@ function get_image_SR(){
         }
     })
     .catch(error => {
-        console.error('Algo salió mal ', error)
-    })
+        console.error('Algo salió mal ', error);
+    });
 }
 
 function vectorizar(){
-    console.log("Ya casi se acaba el TT");
+    if(activated){
+        if(!sending){
+            activated = false;
+            send_url = document.getElementById('send_vec').getAttribute('post-action');
+            body_send = []
+            for (let k = 0; k < color_clusters.length; k++) {
+                if (document.getElementById('boton_'+k).getAttribute('state') == 'enabled'){
+                    // El cambio es para mandar la información de que el usuario cambió el color, si no lo cambió se queda en 'no'
+                    body_send.push({centroide: color_clusters[k], cambio:'no'});
+                }
+            }
+            fetch(send_url, {
+                method:'POST',
+                body:JSON.stringify(body_send)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.estado == 'exito'){
+                    window.location.replace(data.siguiente);
+                }
+            })
+            .catch(error => {
+                console.error('Algo salió mal ', error);
+                activated = true;
+            });
+        }
+    }
+}
+
+function cambiarColores(){
+    if(activated){
+        activated = false;
+        let cantidad = document.getElementById('cantidadColores').value;
+        let request_body = {numero: cantidad}
+        let request_url = document.getElementById('cantidadColores').getAttribute('post-url');
+        fetch(request_url,{
+            method:'POST', 
+            body:JSON.stringify(request_body)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loader').removeAttribute('style');
+            document.getElementById('loader-background').removeAttribute('style');
+            image_tag.removeAttribute('style');
+            img_canvas.setAttribute('style', 'display: none;');
+            boton_group = document.getElementById('color_boton_group');
+            let child = boton_group.lastElementChild;
+            while (child) {
+                boton_group.removeChild(child);
+                child = boton_group.lastElementChild;
+            }
+            color_clusters = data.centroides;
+            for (let i = 0; i < color_clusters.length; i++) {
+                const cluster_center = color_clusters[i];
+                rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
+                boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
+                boton_group.appendChild(boton);
+            }
+            if (data.estado == 'SR'){
+                image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
+                loading_text.innerHTML = 'Suavizando curvas';
+                url = data.siguiente;
+                get_SR();
+            }else if (data.estado == 'exito'){
+                image_tag.setAttribute('style', 'display: none;');
+                img_canvas.removeAttribute('style');
+                img_canvas.setAttribute('width', data.width);
+                img_canvas.setAttribute('height', data.height);
+                lab_image = data.pixels;
+                draw_canvas();
+                activated = true;
+            }
+        })
+        .catch(error => {
+            console.error('Algo salió mal ', error);
+            activated = true;
+        })
+    }
 }
 
 load_image()
