@@ -22,3 +22,6 @@ models/
 
 # Block vscode config
 .vscode/
+
+vectorizer/*.svg
+vectorizer/*.bmp

@@ -66,15 +66,17 @@ function create_button(r, g, b, id){
 
 function update_img(r, g, b, cluster_id){
     if (activated){
+        activated = false;
         boton = document.getElementById('boton_'+cluster_id);
         if (boton.getAttribute('state') == 'enabled'){
             boton.setAttribute('style', 'width: 3.75rem; border-color: rgb('+r+', '+g+', '+b+') !important; color: rgb('+r+', '+g+', '+b+') !important;');
             boton.setAttribute('state', 'disabled');
-        } else{
+        } else {
             boton.setAttribute('style', 'width: 3.75rem; background-color: rgb('+r+', '+g+', '+b+') !important;');
             boton.setAttribute('state', 'enabled');
         }
         draw_canvas();
+        activated = true;
     }
 }
 
@@ -187,6 +189,10 @@ function get_image_SR(){
     .catch(error => {
         console.error('Algo salió mal ', error)
     })
+}
+
+function vectorizar(){
+    console.log("Ya casi se acaba el TT");
 }
 
 load_image()

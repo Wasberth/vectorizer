@@ -6,8 +6,7 @@ from skimage.filters.rank import modal
 from sklearn.metrics import silhouette_score
 import subprocess
 import os
-
-import json
+import re
 
 def preprocess(imagen, max_k=30, model=None):
     """
@@ -47,15 +46,16 @@ def preprocess(imagen, max_k=30, model=None):
 
         sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
 
-        # Evaluar silhouette coefficient para diferentes valores de k
-        for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
-            kmeans = KMeans(n_clusters=k, random_state=22)
-            labels = kmeans.fit_predict(pixels_2d)
-            score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
-            silhouette_scores.append(score)
-
-        # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
-        optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
+        # # Evaluar silhouette coefficient para diferentes valores de k
+        # for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
+        #     kmeans = KMeans(n_clusters=k, random_state=22)
+        #     labels = kmeans.fit_predict(pixels_2d)
+        #     score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
+        #     silhouette_scores.append(score)
+        # 
+        # # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
+        # optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
+        optimal_k = 3
 
         # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
         kmeans = KMeans(n_clusters=optimal_k, random_state=22)
@@ -76,6 +76,59 @@ def preprocess(imagen, max_k=30, model=None):
     # Convertir la imagen procesadada de nuevo a PIL y retornarla
     return Image.fromarray(imagen_segmentada_rgb), kmeans
 
+def vectorize(image, save_path):
+    # Cargar la imagen en RGB
+    width, height = image.size
+    image_np = np.array(image)
+
+    # Encontrar colores únicos
+    unique_colors = np.unique(image_np.reshape(-1, 3), axis=0)
+    print(f"Colores únicos encontrados: {len(unique_colors)}")
+    i = 0
+    paths = []
+    for color in unique_colors:
+        # Crear máscara binaria para el color
+        mask = np.all(image_np != color, axis=-1).astype(np.uint8) * 255
+        temp = Image.fromarray(mask, mode='L')
+        bmp_path = base_path+'\\temp.bmp' 
+        temp.save(bmp_path)
+        
+        # Convertir color a formato hexadecimal
+        hex_color = '#%02x%02x%02x' % tuple(color)
+
+        subprocess.run(["C:/Users/sonic/Downloads/temp/potrace-1.16.win64/potrace.exe", bmp_path, '-o', f'{base_path}\\output_{i}.svg', '--svg', '--color', hex_color])
+        figure_path = ''
+        with open(f'{base_path}\\output_{i}.svg', 'r') as svg_file:
+            finding = True
+            for line in svg_file:
+                if finding:
+                    color = re.findall(r'#[0-9a-f]{6}', line)
+                    if len(color) > 0:
+                        print(color)
+                        finding = False
+                else:
+                    if line.startswith('<path'):
+                        if figure_path != '':
+                            figure_path = figure_path[:-3]
+                            figure_path += f' fill="{hex_color}" transform="translate(0.000000,1184.000000) scale(0.100000,-0.100000)"/>'
+                            paths.append(figure_path)
+                            figure_path = ''
+                    if line.startswith('</g>'):
+                        figure_path = figure_path[:-3]
+                        figure_path += f' fill="{hex_color}" transform="translate(0.000000,1184.000000) scale(0.100000,-0.100000)"/>'
+                        paths.append(figure_path)
+                        break
+                    figure_path += line[:-1] + ' '
+
+        i += 1
+    
+    with open(f'{base_path}\\output.svg', 'w') as f:
+        f.write('<?xml version="1.0" standalone="no"?>\n')
+        f.write(f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}pt" height="{height}pt" viewBox="0 0 {width} {height}" version="1.0" preserveAspectRatio="xMidYMid meet">\n')
+        for pa in paths:
+            f.write(pa+'\n')
+        f.write('</svg>')
+
 if __name__ == '__main__':
     path = 'C:/Users/sonic/3D Objects/input.png'
     base_path = os.path.dirname(__file__)
@@ -86,7 +139,9 @@ if __name__ == '__main__':
     imagen.save(base_path+'\\input.png', 'PNG')
     path = base_path+'\\input.png'
     if total_size < 300000:
-        subprocess.run([f'C:/Users/sonic/3D Objects/RESRGAN/realesrgan-ncnn-vulkan', '-i', path, '-o', f'{base_path}\\output.png', '-v', '1'])
+        subprocess.run(['C:/Users/sonic/3D Objects/RESRGAN/realesrgan-ncnn-vulkan', '-i', path, '-o', f'{base_path}\\output.png', '-v', '1'])
         imagen = Image.open(base_path+'\\output.png')
         imagen, model = preprocess(imagen, model=model)
-    imagen.show()
+    imagen.save(base_path+'\\output.png', 'PNG')
+    #imagen.show()
+    vectorize(imagen, base_path)
