@@ -1,10 +1,14 @@
 function download_svg(button){
-    document.getElementById('config_form').submit();
+    let form = document.getElementById('config_form');
 
+    let grouping = form.elements.namedItem('agrupacion');
+    let style = form.elements.namedItem('estilo');
+    let space = form.elements.namedItem('espacios');
 
-    // url = button.getAttribute('post-action');
-    // fetch(url, {
-    //     method:'POST',
-    //     body: JSON.stringify()
-    // });
+    if (grouping.value == 'color' && space.value == 'uncut') {
+        alert('No se puede agrupar por color y apilar espacios a la vez.');
+        return;
+    }
+
+    form.submit();
 }

@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 import json
 import cv2
 from skimage.filters.rank import modal
-from io import BytesIO
+from io import BytesIO, StringIO
+from svgpathtools import parse_path, Path, svg2paths2, wsvg
+from xml.etree import ElementTree as ET
 load_dotenv()
 
 def vectorize_to_svg(image, save_path, filename):
@@ -91,6 +93,81 @@ def classify(imagen, centroides):
 
     return Image.fromarray(imagen_segmentada_rgb)
     
+def group_by_color(svg_string):
+    paths = list(re.finditer(r'<path[^>]*\bfill="(#[0-9a-f]{6})"[^>]*>', svg_string))
+    if len(paths) == 0:
+        return svg_string
+
+    colors = {}
+    for path in paths:
+        if path[1] not in colors:
+            colors[path[1]] = []
+
+        colors[path[1]].append(path[0])
+
+    new_inner_content = ''
+    i = 0
+    for color, paths in colors.items():
+        new_inner_content += f'\n<g id="{i}">\n'
+        for path in paths:
+            new_inner_content += path + '\n'
+        new_inner_content += '</g>'
+        i += 1
+
+    new_inner_content += '\n'
+
+    svg_string = re.sub(
+        r'(<svg[^>]*>)(.*?)(</svg>)',
+        r'\1' + new_inner_content + r'\3',
+        svg_string,
+        flags=re.DOTALL
+    )
+
+    return svg_string
+
+def turn_fill_to_stroke(svg_string):
+    svg_string = re.sub(
+        r'\bfill="#[0-9a-fA-F]{6}"',
+        'fill="none" stroke="black"',
+        svg_string
+    )
+
+    return svg_string
+
+def stack_figures(svg_string):
+    def remove_holes(match):
+        d = match.group(2)
+        first_path = re.search(r'[^zZ]*[zZ]', d)
+    
+        return match.group(1) + first_path.group(0) + match.group(3)
+
+    svg_string = re.sub(r'(<path[^>]*\bd=")([^"]*)("[^>]*>)', remove_holes, svg_string)
+
+    paths = list(re.finditer(r'<path[^>]*\bd="([^"]*)"[^>]*>', svg_string))
+    if len(paths) == 0:
+        return svg_string
+    
+    def path_area(match):
+        d = match.group(1)
+        try:
+            path = parse_path(d)
+            return abs(path.area())  # Valor absoluto para contar dirección
+        except Exception:
+            return 0.0
+
+    paths = sorted(paths, key=path_area, reverse=True)
+    paths = [path.group(0) for path in paths]
+
+    new_inner_content = '\n'.join(paths)
+
+    svg_string = re.sub(
+        r'(<svg[^>]*>)(.*?)(</svg>)',
+        r'\1' + new_inner_content + r'\3',
+        svg_string,
+        flags=re.DOTALL
+    )
+
+    return svg_string
 
 @route('/vectorize/<filename>', methods=['POST'])
 def vectorize(filename):
@@ -115,8 +192,25 @@ def descargar_svg(filename):
     # Probablemente aquí va validación
     svg_string = ''
     with open(file_path, 'r') as f:
-        for line in f:
-            svg_string += line
+        svg_string = f.read()
+
+    grouping = request.form.get('agrupacion')
+    style = request.form.get('estilo')
+    space = request.form.get('espacios')
+    print(grouping, style, space)
+
+    if grouping == 'color' and space == 'uncut':
+        return json.dumps({'estado': 'error', 'mensaje': 'No se puede agrupar por color y apilar espacios a la vez.'}), 500
+
+    if grouping == 'color':
+        svg_string = group_by_color(svg_string)
+    
+    if space == 'uncut':
+        svg_string = stack_figures(svg_string)
+
+    if style == 'no':
+        svg_string = turn_fill_to_stroke(svg_string)
+
     buffer = BytesIO()
     buffer.write(svg_string.encode('utf-8'))
     buffer.seek(0)
