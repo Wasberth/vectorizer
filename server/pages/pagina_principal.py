@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from PIL import Image
 load_dotenv()
 
-ALLOWED_EXTENSIONS = {'png'}
+ALLOWED_EXTENSIONS = {'png', 'jpg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

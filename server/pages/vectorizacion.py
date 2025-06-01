@@ -1,4 +1,4 @@
-from flask import render_template, url_for, session, redirect, request
+from flask import render_template, url_for, session, redirect, request, send_file
 from decos import route
 import os
 import numpy as np
@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import json
 import cv2
 from skimage.filters.rank import modal
+from io import BytesIO
 load_dotenv()
 
 def vectorize_to_svg(image, save_path, filename):
@@ -18,12 +19,15 @@ def vectorize_to_svg(image, save_path, filename):
 
     # Encontrar colores únicos
     unique_colors = np.unique(image_np.reshape(-1, 3), axis=0)
+    image_np = image_np.reshape((width*height, 3))
     print(f"Colores únicos encontrados: {len(unique_colors)}")
     i = 0
     paths = []
     for color in unique_colors:
         # Crear máscara binaria para el color
-        mask = np.all(image_np != color, axis=-1).astype(np.uint8) * 255
+        mask = np.ones((width*height, 1), np.uint8) * 255
+        mask[np.all(image_np == color, axis=-1)] = 0
+        mask = mask.reshape((height, width))
         temp = Image.fromarray(mask, mode='L')
         bmp_path = f'{save_path}\\{filename}_temp.bmp' 
         temp.save(bmp_path)
@@ -45,12 +49,12 @@ def vectorize_to_svg(image, save_path, filename):
                     if line.startswith('<path'):
                         if figure_path != '':
                             figure_path = figure_path[:-3]
-                            figure_path += f' fill="{hex_color}" transform="translate(0.000000,1184.000000) scale(0.100000,-0.100000)"/>'
+                            figure_path += f' fill="{hex_color}" transform="translate(0.000000,{height}.000000) scale(0.100000,-0.100000)"/>'
                             paths.append(figure_path)
                             figure_path = ''
                     if line.startswith('</g>'):
                         figure_path = figure_path[:-3]
-                        figure_path += f' fill="{hex_color}" transform="translate(0.000000,1184.000000) scale(0.100000,-0.100000)"/>'
+                        figure_path += f' fill="{hex_color}" transform="translate(0.000000,{height}.000000) scale(0.100000,-0.100000)"/>'
                         paths.append(figure_path)
                         break
                     figure_path += line[:-1] + ' '
@@ -80,12 +84,10 @@ def classify(imagen, centroides):
     distancias = np.linalg.norm(diff, axis=-1)
 
     indices = np.argmin(distancias, axis=-1)
-    classified_image = cluster_centers[indices, :].astype(np.uint8)
+    indices_modal = modal(indices.reshape(pixels.shape[0:2]), np.ones((3,3)))
+    classified_image = cluster_centers[indices_modal, :].astype(np.uint8)
     
     imagen_segmentada_rgb = cv2.cvtColor(classified_image, cv2.COLOR_LAB2RGB)
-    print(imagen_segmentada_rgb.shape)
-    imagen_segmentada_rgb = modal(imagen_segmentada_rgb, np.ones((3,3,1)))
-    print(imagen_segmentada_rgb.shape)
 
     return Image.fromarray(imagen_segmentada_rgb)
     
@@ -106,3 +108,15 @@ def vectorize(filename):
 def show_vector(filename):
     return render_template(f'vector.html', stylesheets=['bootstrap.min'], scripts=['bootstrap.min'], filename=filename)
 
+@route('/download/<filename>')
+def descargar_svg(filename):
+    file_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
+    # Probablemente aquí va validación
+    svg_string = ''
+    with open(file_path, 'r') as f:
+        for line in f:
+            svg_string += line
+    buffer = BytesIO()
+    buffer.write(svg_string.encode('utf-8'))
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name='vectorized_img.svg')

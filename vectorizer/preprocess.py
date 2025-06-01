@@ -96,12 +96,9 @@ def vectorize(image, save_path):
         # bmp_path = base_path+f'\\temp_{i}.bmp' 
         # temp.save(bmp_path)
 
-        mask = np.ones((width*height, 1), np.uint8) * 255  # Create a zeroed mask in the size of image.
+        mask = np.ones((width*height, 1), np.uint8) * 255
         otravariable = np.all(image_np == color, axis=-1)
-        print(color)
-        print(image_np[0])
-        print(image_np[0] != color)
-        mask[otravariable] = 0  # Set all pixels with the same color to 255.
+        mask[otravariable] = 0
         mask = mask.reshape((height, width))
         temp = Image.fromarray(mask, mode='L')
         bmp_path = base_path+f'\\temp_{i}.bmp' 

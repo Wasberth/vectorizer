@@ -137,6 +137,8 @@ function load_image(){
             url = data.siguiente;
             get_SR();
         }else if (data.estado == 'exito'){
+            document.getElementById('loader').style.display = 'None';
+            document.getElementById('loader-background').style.display = 'None';
             image_tag.setAttribute('style', 'display: none;');
             img_canvas.removeAttribute('style');
             img_canvas.setAttribute('width', data.width);
@@ -257,6 +259,8 @@ function cambiarColores(){
                 url = data.siguiente;
                 get_SR();
             }else if (data.estado == 'exito'){
+                document.getElementById('loader').style.display = 'None';
+                document.getElementById('loader-background').style.display = 'None';
                 image_tag.setAttribute('style', 'display: none;');
                 img_canvas.removeAttribute('style');
                 img_canvas.setAttribute('width', data.width);
