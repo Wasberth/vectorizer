@@ -7,6 +7,7 @@ from sklearn.metrics import silhouette_score
 import subprocess
 import os
 import re
+import matplotlib.pyplot as plt
 
 def preprocess(imagen, max_k=30, model=None):
     """
@@ -55,7 +56,7 @@ def preprocess(imagen, max_k=30, model=None):
         # 
         # # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
         # optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
-        optimal_k = 3
+        optimal_k = 12
 
         # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
         kmeans = KMeans(n_clusters=optimal_k, random_state=22)
@@ -67,14 +68,15 @@ def preprocess(imagen, max_k=30, model=None):
     colores_clusters = kmeans.cluster_centers_
 
     # Reconstruir la imagen segmentada
-    pixels_recolored = colores_clusters[etiquetas].reshape(pixels.shape).astype(np.uint8)
+    etiquetas_modal = modal(etiquetas.reshape(pixels.shape[0:2]), np.ones((3,3)))
+    pixels_recolored = colores_clusters[etiquetas_modal].reshape(pixels.shape).astype(np.uint8)
 
     # Convertir a RGB para OpenCV
     imagen_segmentada_rgb = cv2.cvtColor(pixels_recolored, cv2.COLOR_LAB2RGB)
-    imagen_segmentada_rgb = modal(imagen_segmentada_rgb, np.ones((3,3,1)))
 
     # Convertir la imagen procesadada de nuevo a PIL y retornarla
-    return Image.fromarray(imagen_segmentada_rgb), kmeans
+    output_img = Image.fromarray(imagen_segmentada_rgb)
+    return output_img, kmeans
 
 def vectorize(image, save_path):
     # Cargar la imagen en RGB
@@ -83,16 +85,27 @@ def vectorize(image, save_path):
 
     # Encontrar colores únicos
     unique_colors = np.unique(image_np.reshape(-1, 3), axis=0)
+    image_np = image_np.reshape((width*height, 3))
     print(f"Colores únicos encontrados: {len(unique_colors)}")
     i = 0
     paths = []
     for color in unique_colors:
         # Crear máscara binaria para el color
-        mask = np.all(image_np != color, axis=-1).astype(np.uint8) * 255
+        # mask = np.all(image_np != color, axis=-1).astype(np.uint8) * 255
+        # temp = Image.fromarray(mask, mode='L')
+        # bmp_path = base_path+f'\\temp_{i}.bmp' 
+        # temp.save(bmp_path)
+
+        mask = np.ones((width*height, 1), np.uint8) * 255  # Create a zeroed mask in the size of image.
+        otravariable = np.all(image_np == color, axis=-1)
+        print(color)
+        print(image_np[0])
+        print(image_np[0] != color)
+        mask[otravariable] = 0  # Set all pixels with the same color to 255.
+        mask = mask.reshape((height, width))
         temp = Image.fromarray(mask, mode='L')
-        bmp_path = base_path+'\\temp.bmp' 
+        bmp_path = base_path+f'\\temp_{i}.bmp' 
         temp.save(bmp_path)
-        
         # Convertir color a formato hexadecimal
         hex_color = '#%02x%02x%02x' % tuple(color)
 
@@ -104,7 +117,6 @@ def vectorize(image, save_path):
                 if finding:
                     color = re.findall(r'#[0-9a-f]{6}', line)
                     if len(color) > 0:
-                        print(color)
                         finding = False
                 else:
                     if line.startswith('<path'):
@@ -136,12 +148,12 @@ if __name__ == '__main__':
     h, w = imagen.size
     total_size = h*w
     imagen, model = preprocess(imagen)
-    imagen.save(base_path+'\\input.png', 'PNG')
+    imagen.save(base_path+'\\input.png', 'PNG', quality=100, subsampling=0)
     path = base_path+'\\input.png'
     if total_size < 300000:
-        subprocess.run(['C:/Users/sonic/3D Objects/RESRGAN/realesrgan-ncnn-vulkan', '-i', path, '-o', f'{base_path}\\output.png', '-v', '1'])
-        imagen = Image.open(base_path+'\\output.png')
+        subprocess.run(['C:/Users/sonic/3D Objects/RESRGAN/realesrgan-ncnn-vulkan', '-i', path, '-o', f'{base_path}\\otronombre.png', '-v', '1'])
+        imagen = Image.open(base_path+'\\otronombre.png')
         imagen, model = preprocess(imagen, model=model)
-    imagen.save(base_path+'\\output.png', 'PNG')
-    #imagen.show()
+    imagen.save(base_path+'\\output.png', 'PNG', quality=100, subsampling=0)
+    imagen = Image.open(base_path+'\\output.png')
     vectorize(imagen, base_path)

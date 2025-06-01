@@ -64,7 +64,7 @@ def vectorize_to_svg(image, save_path, filename):
             f.write(pa+'\n')
         f.write('</svg>')
 
-def classify(imagen, centroides, save_path):
+def classify(imagen, centroides):
     # Cargar la imagen y convertirla en un array de píxeles
     if imagen.mode != 'RGB':
         imagen = imagen.convert('RGB')
@@ -98,7 +98,7 @@ def vectorize(filename):
     for centroide in centroides_request:
         centroides.append(centroide['centroide'])
     imagen = Image.open(file_path)
-    imagen = classify(imagen, centroides, file_path)
+    imagen = classify(imagen, centroides)
     vectorize_to_svg(imagen, os.path.dirname(__file__) + '/uploaded', filename)
     return json.dumps({'estado': 'exito', 'siguiente': url_for('show_vector', filename=filename)})
 
