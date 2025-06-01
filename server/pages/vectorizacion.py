@@ -106,10 +106,11 @@ def vectorize(filename):
 
 @route('/vector/<filename>')
 def show_vector(filename):
-    return render_template(f'vector.html', stylesheets=['bootstrap.min'], scripts=['bootstrap.min'], filename=filename)
+    return render_template(f'vector.html', stylesheets=['bootstrap.min'], scripts=['bootstrap.bundle.min', 'vector_download'], filename=filename)
 
-@route('/download/<filename>')
+@route('/download/<filename>', methods=['POST'])
 def descargar_svg(filename):
+    print(request.form)
     file_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     # Probablemente aquí va validación
     svg_string = ''
