@@ -12,6 +12,7 @@ from skimage.filters.rank import modal
 from io import BytesIO, StringIO
 from svgpathtools import parse_path, Path, svg2paths2, wsvg
 from xml.etree import ElementTree as ET
+from pages._check_level_ import restricted
 load_dotenv()
 
 def vectorize_to_svg(image, save_path, filename):
@@ -170,6 +171,7 @@ def stack_figures(svg_string):
     return svg_string
 
 @route('/vectorize/<filename>', methods=['POST'])
+@restricted('user')
 def vectorize(filename):
     centroides_request = json.loads(request.data)
     file_path = os.path.join(os.path.dirname(__file__) + '/uploaded', filename)
@@ -182,10 +184,12 @@ def vectorize(filename):
     return json.dumps({'estado': 'exito', 'siguiente': url_for('show_vector', filename=filename)})
 
 @route('/vector/<filename>')
+@restricted('user')
 def show_vector(filename):
     return render_template(f'vector.html', stylesheets=['bootstrap.min'], scripts=['bootstrap.bundle.min', 'vector_download'], filename=filename)
 
 @route('/download/<filename>', methods=['POST'])
+@restricted('user')
 def descargar_svg(filename):
     print(request.form)
     file_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)

@@ -2,8 +2,23 @@
 {% block title %} VACA {% endblock %}
 {% block content %}
 <div id="dropzone" class="dropzone"></div>
-
     <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between p-3 border-bottom">
+		{% if 'id_usuario' in session %}
+	  <div class="align-items-center mb-2 mb-lg-0 link-body-emphasis text-decoration-none col">
+        <a href="/" class="d-inline-flex link-body-emphasis text-decoration-none">
+        	<img src="/static/img/logo.svg" height="40px" width="40px">
+        </a>
+      </div>
+      <div class="dropdown align-items-center mb-2 mb-lg-0">
+          <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="/static/img/temp.webp" alt="mdo" width="32" height="32" class="rounded-circle">
+          </a>
+          <ul class="dropdown-menu text-small" style="position: absolute; inset: 0px auto auto 0px; margin: 0px; transform: translate(0px, 34px);" data-popper-placement="bottom-start">
+			<!-- <li><a class="dropdown-item" href="#">Comprar créditos</a></li> -->
+            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Cerrar sesión</a></li>
+          </ul>
+        </div>
+		{% else %}
       <div class="col-md-3 mb-2 mb-md-0">
         <a href="/" class="d-inline-flex link-body-emphasis text-decoration-none">
         	<img src="/static/img/logo.svg" height="40px" width="40px">
@@ -11,9 +26,10 @@
       </div>
 
       <div class="col-md-3 text-end">
-        <button type="button" class="btn btn-outline-primary me-2">Iniciar sesión</button>
-        <button type="button" class="btn btn-primary">Registrarse</button>
+        <a class="btn btn-outline-primary me-2" href="{{ url_for('login') }}">Iniciar sesión</a>
+        <a class="btn btn-primary" href="{{ url_for('registro') }}">Registrarse</a>
       </div>
+	  {% endif %}
     </header>
 
 
@@ -65,7 +81,6 @@
     </a>
 
     <ul class="nav col-md-4 justify-content-end">
-      <li class="nav-item"><a href="#" class="nav-link px-2 text-body-secondary">Sobre nosotros</a></li>
     </ul>
   </footer>
 {% endblock %}

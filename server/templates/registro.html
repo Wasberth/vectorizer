@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %} VACA {% endblock %}
+{% block content %}
+<div class="container login outer">
+	<div class="inner">
+		<main class="form-signin w-100 m-auto">
+		  <form action="{{ url_for('registro') }}" method="POST" onsubmit="return validate(this)">
+		    <img class="mb-4" src="/static/img/logo.svg" alt="logo" width="72" height="72">
+		    <h1 class="h3 mb-3 fw-normal">Ingrese los datos para registrarse</h1>
+
+		    <div class="form-floating">
+		      <input type="email" class="form-control" name="user" placeholder="name@example.com" required>
+		      <label for="floatingInput">Usuario</label>
+		    </div>
+		    <div class="form-floating">
+		      <input type="password" class="form-control" id="og_pass" placeholder="Password" name="password" required>
+		      <label for="floatingPassword">Contraseña</label>
+		    </div>
+		    <div class="form-floating">
+		      <input type="password" class="form-control" id="conf_pass" placeholder="Password" required>
+		      <label for="floatingPassword">Confirmación de la contraseña</label>
+		    </div>
+			<div id="localerror">
+				{% if error %}
+				<div class="alert alert-danger my-2" role="alert">
+					{{ error }}
+				</div>
+				{% endif %}
+			</div>
+		    <button class="btn btn-primary w-100 py-2 mt-3" type="submit">Regístrate</button>
+		  </form>
+		</main>
+	</div>
+</div>
+{% endblock %}

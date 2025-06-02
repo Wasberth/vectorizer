@@ -10,6 +10,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import json
 import subprocess
+from pages._check_level_ import restricted
 load_dotenv()
     
 def preprocess(imagen, max_k=30, model=None, exact_k=0):
@@ -96,14 +97,17 @@ def get_lab(imagen):
     return cv2.cvtColor(pixels, cv2.COLOR_RGB2LAB)    
 
 @route('/preprocesamiento/<name>')
+@restricted('user')
 def preprocesamiento(name):
     return render_template('preprocesamiento.html', stylesheets=['bootstrap.min', 'loading'], scripts=['bootstrap.min', 'image_loader'], filename=name)
 
 @route('/uploaded/<filename>')
+@restricted('user')
 def descargar_imagen(filename):
     return send_from_directory(os.path.join(os.path.dirname(__file__) + os.environ['upload_path']), filename)
 
 @route('/kmeans/<filename>', methods=['POST'])
+@restricted('user')
 def imagen_kmeans(filename):
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     imagen = Image.open(imagen_path)
@@ -117,11 +121,13 @@ def imagen_kmeans(filename):
         return json.dumps({'estado': 'exito', 'centroides': model.cluster_centers_.tolist(), 'pixels': pixel_color_space.tolist(), 'width': w, 'height': h})
     
 @route('/super_resolution/<filename>', methods=['POST'])
+@restricted('user')
 def imagen_sr(filename):
     subprocess.run([os.path.join(os.path.dirname(__file__) + '/RESRGAN', 'realesrgan-ncnn-vulkan'), '-i', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename), '-o', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)])
     return json.dumps({'estado': 'exito', 'siguiente': url_for('kmeans_SR', filename=filename)})
 
 @route('/kmeans_sr/<filename>', methods=['POST'])
+@restricted('user')
 def kmeans_SR(filename):
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     imagen = Image.open(imagen_path)
@@ -130,6 +136,7 @@ def kmeans_SR(filename):
     return json.dumps({'estado': 'exito', 'pixels': pixel_color_space.tolist(), 'width': w, 'height': h})
 
 @route('/cambiar_colores/<filename>', methods=['POST'])
+@restricted('user')
 def cambiar_colores(filename):
     datos = json.loads(request.data)
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], 'original_'+filename)

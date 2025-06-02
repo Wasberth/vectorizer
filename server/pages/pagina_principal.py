@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 from dotenv import load_dotenv
 from PIL import Image
+from pages._check_level_ import restricted
 load_dotenv()
 
 ALLOWED_EXTENSIONS = {'png', 'jpg'}
@@ -14,13 +15,13 @@ def allowed_file(filename):
 @route('/')
 def index_page():
     """Renderiza la página principal"""
-    return render_template(f'index.html', stylesheets=['dropzone', 'customchanges', 'bootstrap.min'], scripts=['bootstrap.min', 'drophandler_1', 'drophandler_2'])
+    return render_template(f'index.html', stylesheets=['dropzone', 'customchanges', 'bootstrap.min'], scripts=['bootstrap.bundle.min', 'drophandler_1', 'drophandler_2'])
 
 @route('/cargar_imagen', methods=['POST'])
+@restricted('user')
 def get_img():
     if 'imagen' not in request.files:
         print('No hay imagen')
-        print(request.form)
         return redirect(request.url)
     file = request.files['imagen']
     if file.filename == '':

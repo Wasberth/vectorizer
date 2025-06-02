@@ -9,11 +9,8 @@ def check_level(levels):
     if type(levels) == str:
         levels = [levels]
 
-    if 'user_id' not in session:
+    if 'id_usuario' not in session:
         return redirect(url_for('login'))
-    if session['nivel'] not in levels:
-        # TODO: Diseñar una página que tenga los vínculos únicos de cada usuario
-        return redirect(url_for('wellcome'))
     
     return None
 
