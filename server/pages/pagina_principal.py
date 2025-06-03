@@ -30,7 +30,6 @@ def get_img():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         base_path = os.path.dirname(__file__) + os.environ['upload_path']
-        print(os.path.dirname(__file__))
         file.save(os.path.join(base_path, filename))
         image = Image.open(os.path.join(base_path, filename))
         image.save(os.path.join(base_path, 'original_'+filename))

@@ -53,14 +53,34 @@ function labToRgb(l_opencv, a_opencv, b_opencv) {
     };
 }
 
+
+function rgb_to_hex(r, g, b){
+    return '#'.concat(r.toString(16), g.toString(16), b.toString(16))
+}
+
+function create_picker(r, g, b, id){
+    picker = document.createElement('INPUT');
+    picker.setAttribute('type', 'color');
+    picker.setAttribute('id', 'picker_'+id);
+    hex = rgb_to_hex(r, g, b);
+    picker.setAttribute('value', hex);
+    picker.setAttribute('style', 'display: None;');
+    return picker;
+}
+
 function create_button(r, g, b, id){
     boton = document.createElement('BUTTON');
     boton.setAttribute('class', 'btn rounded-circle p-3 m-2');
     boton.setAttribute('style', 'width: 3.75rem; background-color: rgb('+r+', '+g+', '+b+') !important;');
     boton.setAttribute('type', 'button');
     boton.setAttribute('state', 'enabled');
-    boton.setAttribute('id', 'boton_'+id)
+    boton.setAttribute('id', 'boton_'+id);
     boton.setAttribute('onclick', 'update_img('+r+', '+g+', '+b+', '+id+')');
+    boton.addEventListener('contextmenu', event => {
+        event.preventDefault();
+        picker = document.getElementById('picker_'+id);
+        picker.click();
+    });
     boton.innerHTML = id+1;
     return boton;
 }
@@ -130,6 +150,8 @@ function load_image(){
             rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
             boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
             boton_group.appendChild(boton);
+            color_picker = create_picker(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
+            boton_group.appendChild(color_picker);
         }
         if (data.estado == 'SR'){
             image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
