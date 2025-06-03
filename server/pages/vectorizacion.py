@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 from pages._check_level_ import restricted
 load_dotenv()
 
-def vectorize_to_svg(image, save_path, filename):
+def vectorize_to_svg(image, save_path, filename, cambios):
     # Cargar la imagen en RGB
     width, height = image.size
     image_np = np.array(image)
@@ -36,7 +36,18 @@ def vectorize_to_svg(image, save_path, filename):
         temp.save(bmp_path)
         
         # Convertir color a formato hexadecimal
-        hex_color = '#%02x%02x%02x' % tuple(color)
+        color = np.array(color)
+        mejor = -1
+        hex_color = ''
+        for cambio in cambios:
+            comparacion = np.array(cambio['original'])
+            dist = np.linalg.norm(color - comparacion)
+            print(dist)
+            print(cambio['valor'])
+            if mejor == -1 or dist < mejor:
+                mejor = dist
+                hex_color = cambio['valor']
+
 
         subprocess.run([os.path.join(os.path.dirname(__file__) + '/potrace', 'potrace.exe'), bmp_path, '-o', f'{save_path}\\{filename}.svg', '--svg', '--color', hex_color])
         figure_path = ''
@@ -176,11 +187,13 @@ def vectorize(filename):
     centroides_request = json.loads(request.data)
     file_path = os.path.join(os.path.dirname(__file__) + '/uploaded', filename)
     centroides = []
+    cambios = []
     for centroide in centroides_request:
         centroides.append(centroide['centroide'])
+        cambios.append(centroide['cambio'])
     imagen = Image.open(file_path)
     imagen = classify(imagen, centroides)
-    vectorize_to_svg(imagen, os.path.dirname(__file__) + '/uploaded', filename)
+    vectorize_to_svg(imagen, os.path.dirname(__file__) + '/uploaded', filename, cambios)
     return json.dumps({'estado': 'exito', 'siguiente': url_for('show_vector', filename=filename)})
 
 @route('/vector/<filename>')

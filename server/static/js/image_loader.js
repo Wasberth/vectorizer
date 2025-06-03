@@ -1,4 +1,5 @@
 let color_clusters = null;
+let color_changes = null;
 let lab_image = null;
 let image_tag = document.getElementById('preprocessed');
 let loading_text = document.getElementById('loading-text');
@@ -55,7 +56,7 @@ function labToRgb(l_opencv, a_opencv, b_opencv) {
 
 
 function rgb_to_hex(r, g, b){
-    return '#'.concat(r.toString(16), g.toString(16), b.toString(16))
+    return '#'.concat(r.toString(16).padStart(2, '0'), g.toString(16).padStart(2, '0'), b.toString(16).padStart(2, '0'))
 }
 
 function create_picker(r, g, b, id){
@@ -65,7 +66,19 @@ function create_picker(r, g, b, id){
     hex = rgb_to_hex(r, g, b);
     picker.setAttribute('value', hex);
     picker.setAttribute('style', 'display: None;');
+    picker.addEventListener('change', event => {
+        change_UI(document.getElementById('picker_'+id).value, id);
+    });
     return picker;
+}
+
+function change_UI(nuevo_color, id){
+    boton = document.getElementById('boton_'+id);
+    color_changes[id].r = parseInt(nuevo_color.substring(1,3), 16);
+    color_changes[id].g = parseInt(nuevo_color.substring(3,5), 16);
+    color_changes[id].b = parseInt(nuevo_color.substring(5,7), 16);
+    boton.style = 'width: 3.75rem; background-color: rgb('+parseInt(nuevo_color.substring(1,3), 16)+', '+parseInt(nuevo_color.substring(3,5), 16)+', '+parseInt(nuevo_color.substring(5,7), 16)+') !important;';
+    draw_canvas();
 }
 
 function create_button(r, g, b, id){
@@ -75,7 +88,7 @@ function create_button(r, g, b, id){
     boton.setAttribute('type', 'button');
     boton.setAttribute('state', 'enabled');
     boton.setAttribute('id', 'boton_'+id);
-    boton.setAttribute('onclick', 'update_img('+r+', '+g+', '+b+', '+id+')');
+    boton.setAttribute('onclick', 'update_img('+id+')');
     boton.addEventListener('contextmenu', event => {
         event.preventDefault();
         picker = document.getElementById('picker_'+id);
@@ -85,15 +98,15 @@ function create_button(r, g, b, id){
     return boton;
 }
 
-function update_img(r, g, b, cluster_id){
+function update_img(cluster_id){
     if (activated){
         activated = false;
         boton = document.getElementById('boton_'+cluster_id);
         if (boton.getAttribute('state') == 'enabled'){
-            boton.setAttribute('style', 'width: 3.75rem; border-color: rgb('+r+', '+g+', '+b+') !important; color: rgb('+r+', '+g+', '+b+') !important;');
+            boton.setAttribute('style', 'width: 3.75rem; border-color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important; color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important;');
             boton.setAttribute('state', 'disabled');
         } else {
-            boton.setAttribute('style', 'width: 3.75rem; background-color: rgb('+r+', '+g+', '+b+') !important;');
+            boton.setAttribute('style', 'width: 3.75rem; background-color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important;');
             boton.setAttribute('state', 'enabled');
         }
         draw_canvas();
@@ -131,7 +144,7 @@ function draw_canvas(){
                 }
             }
             rgb = labToRgb(color_clusters[cluster_class][0], color_clusters[cluster_class][1], color_clusters[cluster_class][2]);
-            ctx.fillStyle = 'rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')';
+            ctx.fillStyle = 'rgb('+color_changes[cluster_class].r+', '+color_changes[cluster_class].g+', '+color_changes[cluster_class].b+')';
             ctx.fillRect(i, j, 1, 1);
         }
     }
@@ -144,9 +157,11 @@ function load_image(){
     .then(response => response.json())
     .then(data => {
         color_clusters = data.centroides;
+        color_changes = [];
         boton_group = document.getElementById('color_boton_group');
         for (let i = 0; i < color_clusters.length; i++) {
             const cluster_center = color_clusters[i];
+            color_changes.push(labToRgb(cluster_center[0], cluster_center[1], cluster_center[2]))
             rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
             boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
             boton_group.appendChild(boton);
@@ -224,8 +239,8 @@ function vectorizar(){
             body_send = []
             for (let k = 0; k < color_clusters.length; k++) {
                 if (document.getElementById('boton_'+k).getAttribute('state') == 'enabled'){
-                    // El cambio es para mandar la información de que el usuario cambió el color, si no lo cambió se queda en 'no'
-                    body_send.push({centroide: color_clusters[k], cambio:'no'});
+                    original_color = labToRgb(color_clusters[k][0], color_clusters[k][1], color_clusters[k][2]);
+                    body_send.push({centroide: color_clusters[k], cambio:{valor: rgb_to_hex(color_changes[k].r, color_changes[k].g, color_changes[k].b), original:[original_color.r, original_color.g, original_color.b]}});
                 }
             }
             fetch(send_url, {
@@ -269,11 +284,15 @@ function cambiarColores(){
                 child = boton_group.lastElementChild;
             }
             color_clusters = data.centroides;
+            color_changes = [];
             for (let i = 0; i < color_clusters.length; i++) {
                 const cluster_center = color_clusters[i];
+                color_changes.push(labToRgb(cluster_center[0], cluster_center[1], cluster_center[2]))
                 rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
                 boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
                 boton_group.appendChild(boton);
+                picker = create_picker(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
+                boton_group.appendChild(picker);
             }
             if (data.estado == 'SR'){
                 image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
