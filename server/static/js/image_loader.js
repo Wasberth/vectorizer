@@ -78,7 +78,7 @@ function change_UI(nuevo_color, id){
     color_changes[id].g = parseInt(nuevo_color.substring(3,5), 16);
     color_changes[id].b = parseInt(nuevo_color.substring(5,7), 16);
     boton.style = 'width: 3.75rem; background-color: rgb('+parseInt(nuevo_color.substring(1,3), 16)+', '+parseInt(nuevo_color.substring(3,5), 16)+', '+parseInt(nuevo_color.substring(5,7), 16)+') !important;';
-    draw_canvas();
+    draw_canvas(id);
 }
 
 function create_button(r, g, b, id){
@@ -105,11 +105,12 @@ function update_img(cluster_id){
         if (boton.getAttribute('state') == 'enabled'){
             boton.setAttribute('style', 'width: 3.75rem; border-color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important; color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important;');
             boton.setAttribute('state', 'disabled');
+            cluster_id = -1
         } else {
             boton.setAttribute('style', 'width: 3.75rem; background-color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important;');
             boton.setAttribute('state', 'enabled');
         }
-        draw_canvas();
+        draw_canvas(cluster_id);
         activated = true;
     }
 }
@@ -121,7 +122,7 @@ function distanciaEuclidiana3D(p1, p2) {
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-function draw_canvas(){
+function draw_canvas(cluster_change){
     width = img_canvas.getAttribute('width');
     height = img_canvas.getAttribute('height');
     let ctx = img_canvas.getContext('2d');
@@ -143,9 +144,11 @@ function draw_canvas(){
                     }
                 }
             }
-            rgb = labToRgb(color_clusters[cluster_class][0], color_clusters[cluster_class][1], color_clusters[cluster_class][2]);
-            ctx.fillStyle = 'rgb('+color_changes[cluster_class].r+', '+color_changes[cluster_class].g+', '+color_changes[cluster_class].b+')';
-            ctx.fillRect(i, j, 1, 1);
+            if(cluster_change == -1 || cluster_class == cluster_change){
+                rgb = labToRgb(color_clusters[cluster_class][0], color_clusters[cluster_class][1], color_clusters[cluster_class][2]);
+                ctx.fillStyle = 'rgb('+color_changes[cluster_class].r+', '+color_changes[cluster_class].g+', '+color_changes[cluster_class].b+')';
+                ctx.fillRect(i, j, 1, 1);
+            }
         }
     }
 }
@@ -181,7 +184,7 @@ function load_image(){
             img_canvas.setAttribute('width', data.width);
             img_canvas.setAttribute('height', data.height);
             lab_image = data.pixels;
-            draw_canvas();
+            draw_canvas(-1);
             activated = true;
         }
     })
@@ -222,7 +225,7 @@ function get_image_SR(){
             img_canvas.setAttribute('width', data.width);
             img_canvas.setAttribute('height', data.height);
             lab_image = data.pixels;
-            draw_canvas();
+            draw_canvas(-1);
             activated = true;
         }
     })
@@ -307,7 +310,7 @@ function cambiarColores(){
                 img_canvas.setAttribute('width', data.width);
                 img_canvas.setAttribute('height', data.height);
                 lab_image = data.pixels;
-                draw_canvas();
+                draw_canvas(-1);
                 activated = true;
             }
         })

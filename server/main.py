@@ -5,7 +5,15 @@ import inspect
 from werkzeug.exceptions import HTTPException
 from dotenv import load_dotenv
 import database_connector as db
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 load_dotenv()
+
+def run_kmeans(k, pixels_2d, sample_size):
+    kmeans = KMeans(n_clusters=k, random_state=22)
+    labels = kmeans.fit_predict(pixels_2d)
+    score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
+    return score
 
 app = Flask(__name__)
 app.secret_key = os.environ['secret_key']

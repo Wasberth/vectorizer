@@ -11,8 +11,12 @@ from sklearn.metrics import silhouette_score
 import json
 import subprocess
 from pages._check_level_ import restricted
+from concurrent.futures import ProcessPoolExecutor
+from main import run_kmeans
 load_dotenv()
-    
+
+executor = ProcessPoolExecutor()
+
 def preprocess(imagen, max_k=30, model=None, exact_k=0):
     """
     Preprocesa una imagen para su segmentación.
@@ -43,7 +47,6 @@ def preprocess(imagen, max_k=30, model=None, exact_k=0):
     else:
         if model==None:
             # Determinar el número óptimo de clusters usando el silhouette coefficient
-            silhouette_scores = []  # Lista para almacenar los valores del silhouette score
             sample_size = len(pixels_2d)
 
             # Log values:
@@ -56,15 +59,26 @@ def preprocess(imagen, max_k=30, model=None, exact_k=0):
 
             sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
 
+            process_info = []
             # Evaluar silhouette coefficient para diferentes valores de k
-            for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
-                kmeans = KMeans(n_clusters=k, random_state=22)
-                labels = kmeans.fit_predict(pixels_2d)
-                score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
-                silhouette_scores.append(score)
+            args_list = []
+            for k in range(2, max_k + 1):
+                args_list.append((k, pixels_2d.copy(), sample_size))
+            futures = [executor.submit(run_kmeans, *args) for args in args_list]
+            silhouette_scores = []
+            for f in futures:
+                try:
+                    silhouette_scores.append(f.result())
+                except Exception as e:
+                    print(f'Error {str(e)}')
+            # for k in range(2, max_k + 1):  # El silhouette coefficient requiere al menos 2 clusters
+                # kmeans = KMeans(n_clusters=k, random_state=22)
+                # labels = kmeans.fit_predict(pixels_2d)
+                # score = silhouette_score(pixels_2d, labels, sample_size=sample_size)  # Calcular silhouette coefficient
+                # silhouette_scores.append(score)
 
             # Determinar el número óptimo de clusters basado en el silhouette coefficient máximo
-            optimal_k = np.argmax(silhouette_scores) + 2  # Ajustar el índice (k inicia en 2)
+            optimal_k = np.argmax(list(silhouette_scores)) + 2  # Ajustar el índice (k inicia en 2)
 
             # Recolorear la imagen con los colores de los clusters obtenidos con el número óptimo de clusters
             kmeans = KMeans(n_clusters=optimal_k, random_state=22)

@@ -15,7 +15,7 @@ def allowed_file(filename):
 @route('/')
 def index_page():
     """Renderiza la página principal"""
-    return render_template(f'index.html', stylesheets=['dropzone', 'customchanges', 'bootstrap.min'], scripts=['bootstrap.bundle.min', 'drophandler_1', 'drophandler_2'])
+    return render_template(f'index.html', stylesheets=['dropzone', 'customchanges', 'bootstrap.min'], scripts=['bootstrap.bundle.min', 'drophandler_2', 'drophandler_1'])
 
 @route('/cargar_imagen', methods=['POST'])
 @restricted('user')

@@ -9,6 +9,7 @@ var dropZone = document.getElementById('dropzone');
 
 function showDropZone() {
 	dropZone.style.display = "block";
+    console.log("algo")
 }
 function hideDropZone() {
     dropZone.style.display = "none";
@@ -34,14 +35,13 @@ window.addEventListener('dragenter', function(e) {
 });
 
 // 2
-dropZone.addEventListener('dragenter', allowDrag);
-dropZone.addEventListener('dragover', allowDrag);
+window.addEventListener('dragenter', allowDrag);
+window.addEventListener('dragover', allowDrag);
 
 // 3
-dropZone.addEventListener('dragleave', function(e) {
-	console.log('dragleave');
+window.addEventListener('dragleave', function(e) {
     hideDropZone();
 });
 
 // 4
-dropZone.addEventListener('drop', handleDrop);
+window.addEventListener('drop', handleDrop);
