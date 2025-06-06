@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import database_connector as db
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from vacaException import VacaException
+from datetime import timedelta
 load_dotenv()
 
 def run_kmeans(k, pixels_2d, sample_size):
@@ -65,9 +67,15 @@ def load_pages_and_register_routes(app: Flask, pages_folder: str = "pages"):
 
                         print(f"Registrado {attr.nav} como offline:{offline}.")
 
-#Descomentar cuando ya quede todo por que no sé en qué parte del código estoy mal jajaja
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=10)
+
 @app.errorhandler(Exception)
 def page_not_found(e):  
+    if isinstance(e, VacaException):
+        return e.response()
     if isinstance(e, HTTPException):
         return render_template('error.html', description=str(e), code=e.code), e.code
   

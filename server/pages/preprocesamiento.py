@@ -13,6 +13,7 @@ import subprocess
 from pages._check_level_ import restricted
 from concurrent.futures import ProcessPoolExecutor
 from main import run_kmeans
+import time
 load_dotenv()
 
 executor = ProcessPoolExecutor()
@@ -128,12 +129,14 @@ def descargar_imagen(filename):
 def imagen_kmeans(filename):
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     imagen = Image.open(imagen_path)
+    w, h = imagen.size
+    pixel_count = h*w
+    if w > 3840 or h > 2160:
+        return json.dumps({'estado': 'wrande'})
     try:
         imagen_procesada, model, pixel_color_space = preprocess(imagen)
     except Exception as e:
         print(e)
-    w, h = imagen.size
-    pixel_count = h*w
     if pixel_count < int(os.environ['min_pixels']):
         imagen_procesada.save(os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename))
         return json.dumps({'estado':'SR', 'centroides': model.cluster_centers_.tolist(), 'siguiente': url_for('imagen_sr', filename=filename)})

@@ -103,6 +103,17 @@ function update_img(cluster_id){
         activated = false;
         boton = document.getElementById('boton_'+cluster_id);
         if (boton.getAttribute('state') == 'enabled'){
+            let activated_colors = 0;
+            for (let k = 0; k < color_clusters.length; k++) {
+                if (document.getElementById('boton_'+k).getAttribute('state') == 'enabled'){
+                    activated_colors++;
+                }
+            }
+            if (activated_colors <= 2){
+                alert("Al menos dos colores deben permanecer activados.");
+                activated = true;
+                return;
+            }
             boton.setAttribute('style', 'width: 3.75rem; border-color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important; color: rgb('+color_changes[cluster_id].r+', '+color_changes[cluster_id].g+', '+color_changes[cluster_id].b+') !important;');
             boton.setAttribute('state', 'disabled');
             cluster_id = -1
@@ -154,48 +165,64 @@ function draw_canvas(cluster_change){
 }
 
 function load_image(){
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 60000);
     fetch(url, {
-        method:'POST'
+        method:'POST',
+        signal: controller.signal
     })
     .then(response => response.json())
     .then(data => {
-        color_clusters = data.centroides;
-        color_changes = [];
-        boton_group = document.getElementById('color_boton_group');
-        for (let i = 0; i < color_clusters.length; i++) {
-            const cluster_center = color_clusters[i];
-            color_changes.push(labToRgb(cluster_center[0], cluster_center[1], cluster_center[2]))
-            rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
-            boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
-            boton_group.appendChild(boton);
-            color_picker = create_picker(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
-            boton_group.appendChild(color_picker);
-        }
-        if (data.estado == 'SR'){
-            image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
-            loading_text.innerHTML = 'Suavizando curvas';
-            url = data.siguiente;
-            get_SR();
-        }else if (data.estado == 'exito'){
-            document.getElementById('loader').style.display = 'None';
-            document.getElementById('loader-background').style.display = 'None';
-            image_tag.setAttribute('style', 'display: none;');
-            img_canvas.removeAttribute('style');
-            img_canvas.setAttribute('width', data.width);
-            img_canvas.setAttribute('height', data.height);
-            lab_image = data.pixels;
-            draw_canvas(-1);
-            activated = true;
+        if (data.estado == 'wrande'){
+            loading_text.innerHTML = 'La imagen excede las dimensiones permitidas, intenta con otra imagen.';
+            loading_text.style = 'color: red;';
+            document.getElementById('spinner-that-spins').style = 'display: None;';
+        } else{
+            color_clusters = data.centroides;
+            color_changes = [];
+            boton_group = document.getElementById('color_boton_group');
+            for (let i = 0; i < color_clusters.length; i++) {
+                const cluster_center = color_clusters[i];
+                color_changes.push(labToRgb(cluster_center[0], cluster_center[1], cluster_center[2]))
+                rgb_coded = labToRgb(cluster_center[0], cluster_center[1], cluster_center[2])
+                boton = create_button(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
+                boton_group.appendChild(boton);
+                color_picker = create_picker(rgb_coded.r, rgb_coded.g, rgb_coded.b, i);
+                boton_group.appendChild(color_picker);
+            }
+            if (data.estado == 'SR'){
+                image_tag.setAttribute('src', image_tag.getAttribute('src') + '?' + new Date().getTime());
+                loading_text.innerHTML = 'Suavizando curvas';
+                url = data.siguiente;
+                get_SR();
+            }else if (data.estado == 'exito'){
+                document.getElementById('loader').style.display = 'None';
+                document.getElementById('loader-background').style.display = 'None';
+                image_tag.setAttribute('style', 'display: none;');
+                img_canvas.removeAttribute('style');
+                img_canvas.setAttribute('width', data.width);
+                img_canvas.setAttribute('height', data.height);
+                lab_image = data.pixels;
+                draw_canvas(-1);
+                activated = true;
+            }
         }
     })
     .catch(error => {
         console.error('Algo salió mal ', error);
-    });
+        if(error.name == 'AbortError'){
+            loading_text.innerHTML = 'La imagen es muy compleja, intenta con otra imagen.';
+            loading_text.style = 'color: red;';
+            document.getElementById('spinner-that-spins').style = 'display: None;';
+        }
+    })
+    .finally(() => clearTimeout(id));
 }
 
 function get_SR(){
     fetch(url, {
-        method:'POST'
+        method:'POST',
+        signal: AbortSignal.timeout(60000)
     })
     .then(response => response.json())
     .then(data => {
@@ -213,7 +240,8 @@ function get_SR(){
 
 function get_image_SR(){
     fetch(url, {
-        method: 'POST'
+        method: 'POST',
+        signal: AbortSignal.timeout(60000)
     })
     .then(response => response.json())
     .then(data =>{
@@ -248,7 +276,8 @@ function vectorizar(){
             }
             fetch(send_url, {
                 method:'POST',
-                body:JSON.stringify(body_send)
+                body:JSON.stringify(body_send),
+                signal: AbortSignal.timeout(60000)
             })
             .then(response => response.json())
             .then(data => {
@@ -266,8 +295,12 @@ function vectorizar(){
 
 function cambiarColores(){
     if(activated){
-        activated = false;
         let cantidad = document.getElementById('cantidadColores').value;
+        if(cantidad < 2){
+            alert('Cantidad inválida de colores.')
+            return;
+        }
+        activated = false;
         let request_body = {numero: cantidad}
         let request_url = document.getElementById('cantidadColores').getAttribute('post-url');
         fetch(request_url,{
