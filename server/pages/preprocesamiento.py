@@ -45,9 +45,13 @@ def preprocess(imagen, max_k=30, model=None, exact_k=0):
         kmeans.fit(pixels_2d)
         etiquetas = kmeans.labels_
     else:
+        pixel_sample_size = len(pixels_2d)
+        pixel_sample_size = int(min(pixel_sample_size, np.ceil(1085.73 * np.log(pixel_sample_size))))
+        sampling_indices = np.random.choice(len(pixels_2d), size=pixel_sample_size, replace=False)
+        sampled_pixels = pixels_2d[sampling_indices]
         if model==None:
             # Determinar el número óptimo de clusters usando el silhouette coefficient
-            sample_size = len(pixels_2d)
+            sample_size = len(sampled_pixels)
 
             # Log values:
             # 
@@ -59,11 +63,10 @@ def preprocess(imagen, max_k=30, model=None, exact_k=0):
 
             sample_size = int(min(sample_size, np.ceil(500 * np.log(sample_size))))
 
-            process_info = []
             # Evaluar silhouette coefficient para diferentes valores de k
             args_list = []
             for k in range(2, max_k + 1):
-                args_list.append((k, pixels_2d.copy(), sample_size))
+                args_list.append((k, sampled_pixels.copy(), sample_size))
             futures = [executor.submit(run_kmeans, *args) for args in args_list]
             silhouette_scores = []
             for f in futures:
@@ -125,7 +128,10 @@ def descargar_imagen(filename):
 def imagen_kmeans(filename):
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     imagen = Image.open(imagen_path)
-    imagen_procesada, model, pixel_color_space = preprocess(imagen)
+    try:
+        imagen_procesada, model, pixel_color_space = preprocess(imagen)
+    except Exception as e:
+        print(e)
     w, h = imagen.size
     pixel_count = h*w
     if pixel_count < int(os.environ['min_pixels']):

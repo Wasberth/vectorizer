@@ -149,7 +149,7 @@ console.clear();
     if (!files.length) return;
     dataRefs.files = files;
 
-    previewFiles(dataRefs);
+    // previewFiles(dataRefs);
     // imageUpload(dataRefs);
     let formulario = document.getElementById('subir_imagen');
     formulario.submit();

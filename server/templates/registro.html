@@ -5,7 +5,9 @@
 	<div class="inner">
 		<main class="form-signin w-100 m-auto">
 		  <form action="{{ url_for('registro') }}" method="POST" onsubmit="return validate(this)">
-		    <img class="mb-4" src="/static/img/logo.svg" alt="logo" width="72" height="72">
+			<a href="{{ url_for('index_page') }}">
+				<img class="mb-4" src="/static/img/logo.svg" alt="logo" width="72" height="72">
+			</a>
 		    <h1 class="h3 mb-3 fw-normal">Ingrese los datos para registrarse</h1>
 
 		    <div class="form-floating">
@@ -27,6 +29,8 @@
 				</div>
 				{% endif %}
 			</div>
+			<br>
+			<a href="{{ url_for('login') }}">¿Ya tienes una cuenta? Inicia sesión</a>
 		    <button class="btn btn-primary w-100 py-2 mt-3" type="submit">Regístrate</button>
 		  </form>
 		</main>
