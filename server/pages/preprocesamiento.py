@@ -164,7 +164,6 @@ def cambiar_colores(filename):
     datos = json.loads(request.data)
     imagen_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], 'original_'+filename)
     imagen = Image.open(imagen_path)
-    print('as')
     imagen_procesada, model, pixel_color_space = preprocess(imagen, exact_k=int(datos['numero']))
     w, h = imagen.size
     pixel_count = h*w

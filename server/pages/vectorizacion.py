@@ -23,7 +23,6 @@ def vectorize_to_svg(image, save_path, filename, cambios):
     # Encontrar colores únicos
     unique_colors = np.unique(image_np.reshape(-1, 3), axis=0)
     image_np = image_np.reshape((width*height, 3))
-    print(f"Colores únicos encontrados: {len(unique_colors)}")
     i = 0
     paths = []
     for color in unique_colors:
@@ -42,8 +41,6 @@ def vectorize_to_svg(image, save_path, filename, cambios):
         for cambio in cambios:
             comparacion = np.array(cambio['original'])
             dist = np.linalg.norm(color - comparacion)
-            print(dist)
-            print(cambio['valor'])
             if mejor == -1 or dist < mejor:
                 mejor = dist
                 hex_color = cambio['valor']
@@ -57,7 +54,6 @@ def vectorize_to_svg(image, save_path, filename, cambios):
                 if finding:
                     color = re.findall(r'#[0-9a-f]{6}', line)
                     if len(color) > 0:
-                        print(color)
                         finding = False
                 else:
                     if line.startswith('<path'):
@@ -204,7 +200,6 @@ def show_vector(filename):
 @route('/download/<filename>', methods=['POST'])
 @restricted('user')
 def descargar_svg(filename):
-    print(request.form)
     file_path = os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)
     # Probablemente aquí va validación
     svg_string = ''
@@ -214,7 +209,6 @@ def descargar_svg(filename):
     grouping = request.form.get('agrupacion')
     style = request.form.get('estilo')
     space = request.form.get('espacios')
-    print(grouping, style, space)
 
     if grouping == 'color' and space == 'uncut':
         return json.dumps({'estado': 'error', 'mensaje': 'No se puede agrupar por color y apilar espacios a la vez.'}), 500

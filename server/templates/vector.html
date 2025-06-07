@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
-{% block title %} VACA {% endblock %}
+{% block title %} Comparación - VACA {% endblock %}
 {% block content %}
   <div class="row g-0 border rounded overflow-hidden flex-md-row shadow-sm h-md-250 position-relative">
-    <div class="col-md-6 mx-auto p-1" style="height: 99svh;">
-      <img class="bd-placeholder-img h-100 w-100" src="/uploaded/original_{{filename}}" alt="Imagen original">  
+    <div class="d-flex col-md-6 justify-content-center p-1" style="height: 99svh;">
+      <div class="d-flex bd-placeholder-img object-fit-scale w-100">
+        <img class="w-100 my-auto" src="/uploaded/original_{{filename}}" alt="Imagen original">  
+      </div>
     </div>
       <div class="col position-static mx-auto p-1" style="height: 99svh;">
         <img class="bd-placeholder-img w-100 h-100" src="/uploaded/{{filename}}.svg" alt="Imagen vectorizada">

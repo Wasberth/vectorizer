@@ -1,10 +1,11 @@
-from flask import render_template, url_for, session, redirect, request
+from flask import render_template, url_for, session, redirect, request, send_from_directory
 from decos import route
 from werkzeug.utils import secure_filename
 import os
 from dotenv import load_dotenv
 from PIL import Image
 from pages._check_level_ import restricted
+import hashlib
 load_dotenv()
 
 ALLOWED_EXTENSIONS = {'png', 'jpg'}
@@ -30,8 +31,16 @@ def get_img():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         base_path = os.path.dirname(__file__) + os.environ['upload_path']
-        file.save(os.path.join(base_path, filename))
-        image = Image.open(os.path.join(base_path, filename))
-        image.save(os.path.join(base_path, 'original_'+filename))
-        return redirect(url_for('preprocesamiento', name=filename))
+
+        hash_sha256 = hashlib.sha256()
+        file.stream.seek(0)
+        for chunk in iter(lambda: file.stream.read(4096), b""):
+            hash_sha256.update(chunk)
+        file.stream.seek(0)
+        hash_name = hash_sha256.hexdigest() + filename[-4:]
+
+        file.save(os.path.join(base_path, hash_name))
+        image = Image.open(os.path.join(base_path, hash_name))
+        image.save(os.path.join(base_path, 'original_'+hash_name))
+        return redirect(url_for('preprocesamiento', name=hash_name))
     return redirect(request.url)
