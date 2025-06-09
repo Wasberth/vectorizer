@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 719.58 618.41">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #231f20;
+        stroke-miterlimit: 10;
+        stroke-width: 25px;
+      }
+    </style>
+  </defs>
+  <circle class="cls-1" cx="188.4" cy="62.5" r="50"/>
+  <circle class="cls-1" cx="657.08" cy="251.51" r="50"/>
+  <circle class="cls-1" cx="188.4" cy="455.91" r="50"/>
+  <circle class="cls-1" cx="510.92" cy="555.91" r="50"/>
+  <line class="cls-1" x1="231.97" y1="87.02" x2="610.62" y2="233.01"/>
+  <line class="cls-1" x1="611.65" y1="272.4" x2="460.92" y2="338.29"/>
+  <line class="cls-1" x1="238.4" y1="480.2" x2="460.92" y2="555.91"/>
+  <line class="cls-1" x1="536.2" y1="505.91" x2="641.46" y2="299.02"/>
+  <circle class="cls-1" cx="416.45" cy="357.74" r="50"/>
+  <circle class="cls-1" cx="62.51" cy="263.78" r="50"/>
+  <line class="cls-1" x1="607.08" y1="251.51" x2="104.94" y2="290.23"/>
+  <line class="cls-1" x1="370.62" y1="377.77" x2="238.4" y2="435.58"/>
+</svg>

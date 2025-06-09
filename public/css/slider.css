@@ -1,0 +1,24 @@
+img-comparison-slider {
+  visibility: hidden;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+img-comparison-slider [slot='second'] {
+  display: none;
+}
+
+img-comparison-slider.rendered {
+  visibility: inherit;
+}
+
+img-comparison-slider.rendered [slot='second'] {
+  display: unset;
+}
+
+.imagen{
+  width: 100%;
+  height: 97svh;
+  object-fit: contain;
+}
