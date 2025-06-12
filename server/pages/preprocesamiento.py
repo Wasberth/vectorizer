@@ -146,7 +146,7 @@ def imagen_kmeans(filename):
 @route('/super_resolution/<filename>', methods=['POST'])
 @restricted('user')
 def imagen_sr(filename):
-    subprocess.run([os.path.join(os.path.dirname(__file__) + '/RESRGAN', 'realesrgan-ncnn-vulkan'), '-i', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename), '-o', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)])
+    subprocess.run([os.path.join(os.path.dirname(__file__) + '/RESRGAN', 'realesrgan-ncnn-vulkan'), '-i', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], 'original_'+filename), '-o', os.path.join(os.path.dirname(__file__) + os.environ['upload_path'], filename)])
     return json.dumps({'estado': 'exito', 'siguiente': url_for('kmeans_SR', filename=filename)})
 
 @route('/kmeans_sr/<filename>', methods=['POST'])
